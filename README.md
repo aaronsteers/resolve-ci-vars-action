@@ -1,4 +1,4 @@
-# 🔧 Resolve Variables Action
+# 🔧 Resolve CI Variables Action
 
 ⚡️ Run your CI workflows with multiple triggers. Stop writing custom bash variable resolvers, and end your if/then expression nightmares.
 
