@@ -245,14 +245,14 @@ runs:
         # Resolved Variables (always the effective context)
         # For PRs: resolved = source (head), for other contexts: resolved = current
         if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_target" ]]; then
-          CI_VARS["resolved-git-ref"]="refs/heads/${{ github.head_ref || github.ref_name }}"
-          CI_VARS["resolved-git-branch"]="${{ github.head_ref || github.ref_name }}"
-          CI_VARS["resolved-git-sha"]="${{ github.event.pull_request.head.sha || github.sha }}"
-          CI_VARS["resolved-repo-name-full"]="${{ github.event.pull_request.head.repo.full_name || github.repository }}"
-          CI_VARS["resolved-repo-owner"]="${{ github.event.pull_request.head.repo.owner.login || github.repository_owner }}"
+          CI_VARS["resolved-git-ref"]="refs/heads/${{ github.head_ref != '' && github.head_ref || github.ref_name }}"
+          CI_VARS["resolved-git-branch"]="${{ github.head_ref != '' && github.head_ref || github.ref_name }}"
+          CI_VARS["resolved-git-sha"]="${{ github.event.pull_request.head.sha != '' && github.event.pull_request.head.sha || github.sha }}"
+          CI_VARS["resolved-repo-name-full"]="${{ github.event.pull_request.head.repo.full_name != '' && github.event.pull_request.head.repo.full_name || github.repository }}"
+          CI_VARS["resolved-repo-owner"]="${{ github.event.pull_request.head.repo.owner.login != '' && github.event.pull_request.head.repo.owner.login || github.repository_owner }}"
           resolved_repo_name="${{ github.event.pull_request.head.repo.name }}"
           if [[ -z "$resolved_repo_name" ]]; then
-            resolved_repo_full="${{ github.event.pull_request.head.repo.full_name || github.repository }}"
+            resolved_repo_full="${{ github.event.pull_request.head.repo.full_name != '' && github.event.pull_request.head.repo.full_name || github.repository }}"
             resolved_repo_name="${resolved_repo_full##*/}"
           fi
           CI_VARS["resolved-repo-name"]="$resolved_repo_name"
@@ -334,13 +334,13 @@ runs:
           pr_input="${{ github.event.inputs.pr || github.event.inputs.pr-number }}"
           if [[ -n "$pr_input" ]]; then
             # Validate PR input to prevent command injection
-            if [[ "$pr_input" =~ ^[0-9]+$ ]] || [[ "$pr_input" =~ ^https://github\.com/[^/]+/[^/]+/pull/[0-9]+$ ]]; then
+            if [[ "$pr_input" =~ ^[0-9]+$ ]] || [[ "$pr_input" =~ ^https://github\.com/[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+/pull/[0-9]+$ ]]; then
               echo "Auto-detected PR input: $pr_input"
               CI_VARS["pr-number"]="$pr_input"
               
               if [[ "${{ steps.check-gh-cli.outputs.gh-available }}" == "true" ]]; then
                 # Fetch PR data and update resolved variables to point to PR head
-                pr_data=$(gh pr view "$pr_input" --json headRefName,headRepository,headRepositoryOwner,number,title 2>/dev/null || echo "")
+                pr_data=$(gh pr view --json headRefName,headRepository,headRepositoryOwner,number,title -- "$pr_input" 2>/dev/null || echo "")
                 if [[ -n "$pr_data" ]]; then
                   source_branch=$(echo "$pr_data" | jq -r '.headRefName // empty')
                   source_repo=$(echo "$pr_data" | jq -r '.headRepository.nameWithOwner // empty')
@@ -375,7 +375,7 @@ runs:
           fi
           
           # Auto-detect issue input (issue-id or issue-number)
-          issue_input="${{ github.event.inputs.issue-id || github.event.inputs.issue-number }}"
+          issue_input="${{ github.event.inputs.issue-id != '' && github.event.inputs.issue-id || github.event.inputs.issue-number }}"
           if [[ -n "$issue_input" ]]; then
             echo "Auto-detected issue input: $issue_input"
             CI_VARS["issue-number"]="$issue_input"
@@ -387,7 +387,7 @@ runs:
         fi
         
         # PR Variables
-        CI_VARS["pr-number"]="${{ github.event.pull_request.number || github.event.issue.number }}"
+        CI_VARS["pr-number"]="${{ github.event.pull_request.number != '' && github.event.pull_request.number || github.event.issue.number }}"
         CI_VARS["pr-title"]="${{ github.event.pull_request.title }}"
         if [[ -n "${{ github.event.pull_request.number }}" ]]; then
           CI_VARS["pr-url"]="https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
@@ -398,7 +398,7 @@ runs:
         # Comment Variables
         CI_VARS["comment-id"]="${{ github.event.comment.id }}"
         if [[ -n "${{ github.event.comment.id }}" ]]; then
-          CI_VARS["comment-url"]="https://github.com/${{ github.repository }}/issues/${{ github.event.issue.number || github.event.pull_request.number }}#issuecomment-${{ github.event.comment.id }}"
+          CI_VARS["comment-url"]="https://github.com/${{ github.repository }}/issues/${{ github.event.issue.number != '' && github.event.issue.number || github.event.pull_request.number }}#issuecomment-${{ github.event.comment.id }}"
         else
           CI_VARS["comment-url"]=""
         fi
