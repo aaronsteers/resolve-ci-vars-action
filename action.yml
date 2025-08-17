@@ -570,16 +570,16 @@ runs:
         # Output the JSON object as 'custom'
         echo "custom=$json_payload_compact" >> "$GITHUB_OUTPUT"
 
-        # Logging with emoji grouping for better scanability
+        # Logging with GitHub Actions grouping for better scanability
         SHOULD_LOG="${{ inputs.log_outputs == 'true' || inputs.non_sensitive == 'true' }}"
         if [[ "$SHOULD_LOG" == "true" ]]; then
-          echo "🔧 ===== Variable Resolution Results ====="
+          echo "::group::🔧 Variable Resolution Results"
           echo "✅ Resolved variables:"
           for var_name in "${!RESOLVED_VARS[@]}"; do
             echo "  📝 $var_name: ${RESOLVED_VARS[$var_name]}"
           done
           echo "  📦 custom (JSON): $json_payload_compact"
-          echo "🔧 ===== End Variable Resolution ====="
+          echo "::endgroup::"
 
           {
             echo "### 🔍 Variable Resolution Summary"
