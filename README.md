@@ -85,39 +85,47 @@ The action automatically resolves common CI variables from GitHub context, elimi
 
 #### Standard CI Variables Reference
 
-| Variable | Description | Resolves From | Example Value |
-|----------|-------------|---------------|---------------|
-| **Repository & Git Context** |
-| `target-repo` | Target repository (base repo in owner/name format) | `github.repository` or `github.event.pull_request.base.repo.full_name` | `airbytehq/airbyte` |
-| `repo-owner` | Repository owner/organization | `github.repository_owner` | `airbytehq` |
-| `repo-name` | Repository name only | `github.event.repository.name` or extracted from repository | `airbyte` |
-| `repo-name-full` | Full repository name (owner/name) | Same as `target-repo` | `airbytehq/airbyte` |
-| `source-branch` | Source branch being merged (null for issues) | `github.head_ref` or `github.ref_name` | `feature/new-connector` |
-| `target-branch` | Target branch for merge (null for issues) | `github.base_ref` or default branch | `main` |
-| `source-repo` | Source repository (important for forks, null for issues) | `github.event.pull_request.head.repo.full_name` | `contributor/airbyte` |
-| `source-sha` | Source commit SHA (null for issues) | `github.event.pull_request.head.sha` | `abc123...` |
-| `target-sha` | Target commit SHA (null for issues) | `github.event.pull_request.base.sha` | `def456...` |
-| `restricted-security-mode` | Whether running in restricted security mode | `true` when from fork/dependabot and trigger is `pull_request` | `true` |
-| **Pull Request Variables** |
-| `pr-number` | Pull request number | `github.event.pull_request.number` or `github.event.issue.number` | `12345` |
-| `pr-title` | Pull request title | `github.event.pull_request.title` | `feat: Add new connector` |
-| `pr-author` | Pull request author username | `github.event.pull_request.user.login` | `contributor` |
-| `pr-draft` | Whether PR is draft | `github.event.pull_request.draft` | `true` |
-| `pr-from-fork` | Whether PR is from a fork | `github.event.pull_request.head.repo.fork` | `true` |
-| **Issue Variables** |
-| `issue-number` | Issue number (equals pr-number for PRs) | `github.event.issue.number` or `github.event.pull_request.number` | `12345` |
-| `issue-title` | Issue title | `github.event.issue.title` or `github.event.pull_request.title` | `Bug: Fix connector issue` |
-| `issue-author` | Issue author username | `github.event.issue.user.login` or `github.event.pull_request.user.login` | `reporter` |
-| `issue-type` | Type of issue context | Detected from event type | `pull_request` or `issue` |
-| **Comment Variables** |
-| `comment-id` | Comment ID that triggered workflow | `github.event.comment.id` | `987654321` |
-| `comment-author` | Comment author username | `github.event.comment.user.login` | `maintainer` |
-| `comment-body` | Comment body text | `github.event.comment.body` | `/test connector` |
-| **Workflow Context** |
-| `trigger-event` | Event that triggered workflow | `github.event_name` | `pull_request` |
-| `workflow-actor` | User who triggered the workflow | `github.actor` | `contributor` |
-| `run-id` | Workflow run ID | `github.run_id` | `123456789` |
-| `run-number` | Workflow run number | `github.run_number` | `42` |
+| Variable | Description | Example Value |
+|----------|-------------|---------------|
+| **Resolved Variables (always the effective context)** |
+| `resolved-git-ref` | Full Git ref (`refs/heads/...` or `refs/tags/...`) | `refs/heads/feature/new-connector` |
+| `resolved-git-branch` | Short branch name (e.g. `main`, `feature/foo`) | `feature/new-connector` |
+| `resolved-git-sha` | Commit SHA | `abc123...` |
+| `resolved-git-tag` | Tag name (if applicable) | `v1.0.0` |
+| `resolved-repo-name` | Repository name (e.g. `my-repo`) | `airbyte` |
+| `resolved-repo-owner` | Repository owner (user or org) | `airbytehq` |
+| `resolved-repo-full-name` | Owner + name (e.g. `myorg/my-repo`) | `airbytehq/airbyte` |
+| `resolved-git-branch-url` | URL to the branch in GitHub | `https://github.com/airbytehq/airbyte/tree/feature/new-connector` |
+| `resolved-git-commit-url` | URL to the commit in GitHub | `https://github.com/airbytehq/airbyte/commit/abc123...` |
+| **PR Source Variables (for PR workflows)** |
+| `pr-source-git-ref` | Git ref of the source (PR head) | `refs/heads/feature/new-connector` |
+| `pr-source-git-branch` | Branch name of the source | `feature/new-connector` |
+| `pr-source-git-sha` | SHA of the source commit | `abc123...` |
+| `pr-source-repo-name` | Source repo name | `airbyte` |
+| `pr-source-repo-owner` | Source repo owner | `contributor` |
+| `pr-source-repo-full-name` | Full source repo name (owner/name) | `contributor/airbyte` |
+| `pr-source-git-branch-url` | URL to the source branch | `https://github.com/contributor/airbyte/tree/feature/new-connector` |
+| `pr-source-git-commit-url` | URL to the source commit | `https://github.com/contributor/airbyte/commit/abc123...` |
+| `pr-source-is-fork` | Whether the source repo is a fork | `true` |
+| **PR Target Variables (for PR workflows)** |
+| `pr-target-git-ref` | Git ref of the target (PR base) | `refs/heads/main` |
+| `pr-target-git-branch` | Branch name of the target | `main` |
+| `pr-target-git-sha` | SHA of the target commit | `def456...` |
+| `pr-target-git-tag` | Tag name, if PR targets a tag | `` |
+| `pr-target-repo-name` | Target repo name | `airbyte` |
+| `pr-target-repo-owner` | Target repo owner | `airbytehq` |
+| `pr-target-repo-full-name` | Full target repo name (owner/name) | `airbytehq/airbyte` |
+| `pr-target-git-branch-url` | URL to the target branch | `https://github.com/airbytehq/airbyte/tree/main` |
+| `pr-target-git-commit-url` | URL to the target commit | `https://github.com/airbytehq/airbyte/commit/def456...` |
+| **Additional Resolved Metadata** |
+| `pr-number` | Pull request number (if applicable) | `12345` |
+| `pr-url` | URL to the pull request | `https://github.com/airbytehq/airbyte/pull/12345` |
+| `pr-title` | Title of the pull request | `feat: Add new connector` |
+| `comment-id` | ID of the triggering comment (if applicable) | `987654321` |
+| `comment-url` | URL to the triggering comment (if applicable) | `https://github.com/airbytehq/airbyte/issues/12345#issuecomment-987654321` |
+| `run-id` | GitHub Actions run ID | `123456789` |
+| `run-url` | URL to the GitHub Actions run | `https://github.com/airbytehq/airbyte/actions/runs/123456789` |
+| `is-pr` | Boolean: whether the current context is a PR | `true` |
 
 #### Usage Example
 
@@ -132,17 +140,17 @@ The action automatically resolves common CI variables from GitHub context, elimi
 - name: Use resolved variables
   run: |
     echo "PR Number: ${{ steps.vars.outputs.pr-number }}"
-    echo "Source Branch: ${{ steps.vars.outputs.source-branch }}"
-    echo "Repository: ${{ steps.vars.outputs.target-repo }}"
-    echo "All variables: ${{ steps.vars.outputs.all }}"
+    echo "Resolved Branch: ${{ steps.vars.outputs.resolved-git-branch }}"
+    echo "Repository: ${{ steps.vars.outputs.resolved-repo-full-name }}"
+    echo "All variables: ${{ steps.vars.outputs.custom }}"
 ```
 
 **Key Features:**
-- **Smart source-branch resolution**: Handles "run from main, operate on PR branch" pattern for slash commands
-- **Issue-aware**: Git refs are null for issue events since issues don't have branches
-- **Fork-friendly**: Properly distinguishes between source and target repositories
-- **Security-aware**: Detects restricted security mode for fork/dependabot PRs
-- **Trigger-agnostic**: Works with pull_request, workflow_dispatch, issue_comment, and more
+- **Smart resolved context**: `resolved-*` variables always point to the effective working context (PR head for PRs, current branch otherwise)
+- **Explicit PR source/target**: Separate `pr-source-*` and `pr-target-*` variables for fine-grained PR workflows
+- **URL generation**: Automatic GitHub URLs for branches, commits, PRs, and comments
+- **Fork-aware**: Properly distinguishes between source and target repositories in fork scenarios
+- **Context detection**: `is-pr` boolean and other metadata for workflow logic
 
 ---
 
@@ -200,11 +208,11 @@ jobs:
 
 | Output Name | Description                                                    |
 |-------------|----------------------------------------------------------------|
-| `all`       | JSON-encoded object with all resolved values                  |
+| `custom`    | JSON-encoded object with all resolved values                  |
 | `var1`      | Custom user-defined output variable 1                         |
 | `var2`      | Custom user-defined output variable 2                         |
 | `var3`      | Custom user-defined output variable 3                         |
-| `{variable-name}` | Individual outputs for each resolved variable (e.g., `pr-number`, `head-ref`) |
+| `{variable-name}` | Individual outputs for each resolved variable (e.g., `pr-number`, `resolved-git-branch`) |
 
 ---
 

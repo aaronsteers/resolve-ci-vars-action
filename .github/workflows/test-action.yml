@@ -113,91 +113,77 @@ jobs:
       - name: Print CI variables output
         run: |
           echo "=== DEBUG: Standard CI Variables ==="
-          echo "All variables: ${{ steps.test-ci-vars.outputs.all }}"
-          echo "Target repo: ${{ steps.test-ci-vars.outputs.repo }}"
-          echo "Trigger type: ${{ steps.test-ci-vars.outputs.trigger-type }}"
-          echo "Actor: ${{ steps.test-ci-vars.outputs.actor }}"
-          echo "Repo owner: ${{ steps.test-ci-vars.outputs.repo-owner }}"
-          echo "Repository name: ${{ steps.test-ci-vars.outputs.repo-name }}"
-          echo "Repository name full: ${{ steps.test-ci-vars.outputs.repo-name-full }}"
-          echo "Restricted security mode: ${{ steps.test-ci-vars.outputs.restricted-security-mode }}"
+          echo "All variables: ${{ steps.test-ci-vars.outputs.custom }}"
+          echo "Resolved repo: ${{ steps.test-ci-vars.outputs.resolved-repo-full-name }}"
+          echo "Resolved branch: ${{ steps.test-ci-vars.outputs.resolved-git-branch }}"
+          echo "PR number: ${{ steps.test-ci-vars.outputs.pr-number }}"
+          echo "Run ID: ${{ steps.test-ci-vars.outputs.run-id }}"
+          echo "Is PR: ${{ steps.test-ci-vars.outputs.is-pr }}"
           echo "=================================="
 
       - name: Verify standard CI variables
         run: |
           # Check that standard CI variables are populated
-          if [ -z "${{ steps.test-ci-vars.outputs.repo }}" ]; then
-            echo "ERROR: repo variable should be populated"
+          if [ -z "${{ steps.test-ci-vars.outputs.resolved-repo-full-name }}" ]; then
+            echo "ERROR: resolved-repo-full-name variable should be populated"
             exit 1
           fi
 
-          if [ -z "${{ steps.test-ci-vars.outputs.trigger-type }}" ]; then
-            echo "ERROR: trigger-type variable should be populated"
+          if [ -z "${{ steps.test-ci-vars.outputs.resolved-git-branch }}" ]; then
+            echo "ERROR: resolved-git-branch variable should be populated"
             exit 1
           fi
 
-          if [ -z "${{ steps.test-ci-vars.outputs.actor }}" ]; then
-            echo "ERROR: actor variable should be populated"
+          if [ -z "${{ steps.test-ci-vars.outputs.resolved-repo-owner }}" ]; then
+            echo "ERROR: resolved-repo-owner variable should be populated"
             exit 1
           fi
 
-          if [ -z "${{ steps.test-ci-vars.outputs.repo-owner }}" ]; then
-            echo "ERROR: repo-owner variable should be populated"
+          if [ -z "${{ steps.test-ci-vars.outputs.resolved-repo-name }}" ]; then
+            echo "ERROR: resolved-repo-name variable should be populated"
             exit 1
           fi
 
-          if [ -z "${{ steps.test-ci-vars.outputs.repo-name }}" ]; then
-            echo "ERROR: repo-name variable should be populated"
+          if [ -z "${{ steps.test-ci-vars.outputs.run-id }}" ]; then
+            echo "ERROR: run-id variable should be populated"
             exit 1
           fi
 
-          if [ -z "${{ steps.test-ci-vars.outputs.repo-name-full }}" ]; then
-            echo "ERROR: repo-name-full variable should be populated"
+          if [ -z "${{ steps.test-ci-vars.outputs.is-pr }}" ]; then
+            echo "ERROR: is-pr variable should be populated"
             exit 1
           fi
 
-          if [ -z "${{ steps.test-ci-vars.outputs.restricted-security-mode }}" ]; then
-            echo "ERROR: restricted-security-mode variable should be populated"
+          # Verify resolved-repo-full-name matches expected format
+          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-full-name }}" != "aaronsteers/resolve-vars-action" ]; then
+            echo "ERROR: resolved-repo-full-name should be aaronsteers/resolve-vars-action"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.resolved-repo-full-name }}"
             exit 1
           fi
 
-          # Verify repo matches expected format
-          if [ "${{ steps.test-ci-vars.outputs.repo }}" != "aaronsteers/resolve-vars-action" ]; then
-            echo "ERROR: repo should be aaronsteers/resolve-vars-action"
-            echo "Actual: ${{ steps.test-ci-vars.outputs.repo }}"
+          # Verify resolved-repo-owner matches expected value
+          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-owner }}" != "aaronsteers" ]; then
+            echo "ERROR: resolved-repo-owner should be aaronsteers"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.resolved-repo-owner }}"
             exit 1
           fi
 
-          # Verify repo-owner matches expected value
-          if [ "${{ steps.test-ci-vars.outputs.repo-owner }}" != "aaronsteers" ]; then
-            echo "ERROR: repo-owner should be aaronsteers"
-            echo "Actual: ${{ steps.test-ci-vars.outputs.repo-owner }}"
+          # Verify resolved-repo-name matches expected value
+          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-name }}" != "resolve-vars-action" ]; then
+            echo "ERROR: resolved-repo-name should be resolve-vars-action"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.resolved-repo-name }}"
             exit 1
           fi
 
-          # Verify repo-name matches expected value
-          if [ "${{ steps.test-ci-vars.outputs.repo-name }}" != "resolve-vars-action" ]; then
-            echo "ERROR: repo-name should be resolve-vars-action"
-            echo "Actual: ${{ steps.test-ci-vars.outputs.repo-name }}"
-            exit 1
-          fi
-
-          # Verify repo-name-full matches expected value
-          if [ "${{ steps.test-ci-vars.outputs.repo-name-full }}" != "aaronsteers/resolve-vars-action" ]; then
-            echo "ERROR: repo-name-full should be aaronsteers/resolve-vars-action"
-            echo "Actual: ${{ steps.test-ci-vars.outputs.repo-name-full }}"
-            exit 1
-          fi
-
-          # Verify restricted-security-mode is false for non-fork PRs
-          if [ "${{ steps.test-ci-vars.outputs.restricted-security-mode }}" != "false" ]; then
-            echo "ERROR: restricted-security-mode should be false for non-fork PRs"
-            echo "Actual: ${{ steps.test-ci-vars.outputs.restricted-security-mode }}"
+          # Verify is-pr is false for non-PR events (this test runs on pull_request so should be true)
+          if [ "${{ steps.test-ci-vars.outputs.is-pr }}" != "true" ]; then
+            echo "ERROR: is-pr should be true for pull_request events"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.is-pr }}"
             exit 1
           fi
 
           # Check that custom variables are still included
-          if [ "${{ fromJSON(steps.test-ci-vars.outputs.all).custom_var }}" != "test_value" ]; then
+          if [ "${{ fromJSON(steps.test-ci-vars.outputs.custom).custom_var }}" != "test_value" ]; then
             echo "ERROR: custom_var should still be included with standard CI vars"
             exit 1
           fi
