@@ -81,7 +81,7 @@ For help with Jinja2 expressions, check out these resources:
 
 ### Standard CI Vars
 
-When `standard_ci_vars` is enabled (default: `true`), the action automatically resolves common CI variables from GitHub context, eliminating the need for complex expressions like `${{ github.event.pull_request.head.repo.full_name || github.repository }}` throughout your workflows.
+The action automatically resolves common CI variables from GitHub context, eliminating the need for complex expressions like `${{ github.event.pull_request.head.repo.full_name || github.repository }}` throughout your workflows.
 
 #### Standard CI Variables Reference
 
@@ -126,7 +126,6 @@ When `standard_ci_vars` is enabled (default: `true`), the action automatically r
   id: vars
   uses: aaronsteers/resolve-vars-action@v1
   with:
-    standard_ci_vars: true
     static_inputs: |
       custom_var=my_value
 
@@ -192,7 +191,6 @@ jobs:
 |----------------|-----------------------------------------------------------------------------------------------------|----------|---------|
 | `static_inputs`| Variable assignments in key=value format (multiline string)                                        | ❌       |         |
 | `jinja_inputs` | Jinja2 expressions to evaluate (e.g. `user or default_user`)                                       | ❌       |         |
-| `standard_ci_vars` | Whether to automatically resolve standard CI variables from GitHub context                     | ❌       | `true` |
 | `log_outputs`  | Whether to log resolved values to the console and step summary                                      | ❌       | `false` |
 | `non_sensitive`| Alias for `log_outputs`                                                                            | ❌       | `false` |
 

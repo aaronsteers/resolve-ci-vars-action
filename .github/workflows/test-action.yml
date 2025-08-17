@@ -203,27 +203,3 @@ jobs:
           fi
 
           echo "✅ Standard CI variables test passed!"
-
-      - name: Test with standard CI vars disabled
-        id: test-no-ci-vars
-        uses: ./
-        with:
-          standard_ci_vars: false
-          static_inputs: |
-            test_var=backward_compat
-
-      - name: Verify standard CI vars disabled
-        run: |
-          # Ensure CI variables are NOT populated when disabled
-          if [ -n "${{ steps.test-no-ci-vars.outputs.repo }}" ]; then
-            echo "ERROR: repo should not be populated when standard_ci_vars is false"
-            exit 1
-          fi
-
-          # Ensure custom variables still work
-          if [ "${{ fromJSON(steps.test-no-ci-vars.outputs.all).test_var }}" != "backward_compat" ]; then
-            echo "ERROR: custom variables should still work when standard_ci_vars is false"
-            exit 1
-          fi
-
-          echo "✅ Standard CI vars disabled test passed!"

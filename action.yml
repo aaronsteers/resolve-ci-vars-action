@@ -23,13 +23,6 @@ inputs:
       Alias for log_outputs (true = show evaluated output)
     default: 'false'
     required: false
-  standard_ci_vars:
-    description: >
-      Whether to automatically resolve standard CI variables from GitHub context.
-      When enabled, variables like pr-number, source-branch, target-branch, etc. are automatically
-      populated based on the trigger type.
-    default: 'true'
-    required: false
 outputs:
   all:
     value: ${{ steps.merge-results.outputs.all_vars }}
@@ -218,9 +211,8 @@ runs:
         # Save initial JSON for potential jinja processing
         echo "INITIAL_JSON=$json_payload" >> "$GITHUB_ENV"
 
-    # Process standard CI variables if enabled
+    # Process standard CI variables
     - id: resolve-standard-ci-vars
-      if: ${{ inputs.standard_ci_vars == 'true' }}
       shell: bash
       run: |
         declare -A CI_VARS
@@ -441,8 +433,8 @@ runs:
           done <<< "${{ inputs.static_inputs }}"
         fi
 
-        # Add CI variables to RESOLVED_VARS if standard_ci_vars is enabled
-        if [[ "${{ inputs.standard_ci_vars }}" == "true" && -n "$CI_VARS_JSON" ]]; then
+        # Add CI variables to RESOLVED_VARS
+        if [[ -n "$CI_VARS_JSON" ]]; then
           echo "Adding standard CI variables..."
           # Parse CI_VARS_JSON and add to RESOLVED_VARS
           while IFS="=" read -r key value; do
