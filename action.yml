@@ -13,6 +13,10 @@ inputs:
     description: >
       Jinja2 expression to evaluate (e.g. user or default_user)
     required: false
+  pr:
+    description: 'PR number to resolve variables for (overrides auto-detection from workflow_dispatch inputs)'
+    required: false
+    default: ''
   log_outputs:
     description: >
       Whether to log the resolved value (default false). This can be enabled if
@@ -333,8 +337,8 @@ runs:
         if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
           echo "Detecting workflow_dispatch inputs..."
 
-          # Auto-detect PR input (pr or pr-number)
-          pr_input="${{ github.event.inputs.pr || github.event.inputs.pr-number }}"
+          # Use explicit pr input or auto-detect from workflow_dispatch inputs (pr or pr-number)
+          pr_input="${{ inputs.pr != '' && inputs.pr || (github.event.inputs.pr || github.event.inputs.pr-number) }}"
           if [[ -n "$pr_input" ]]; then
             # Validate PR input to prevent command injection
             if [[ "$pr_input" =~ ^[0-9]+$ ]] || [[ "$pr_input" =~ ^https://github\.com/[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+/pull/[0-9]+$ ]]; then
@@ -343,13 +347,22 @@ runs:
 
               if [[ "${{ steps.check-gh-cli.outputs.gh-available }}" == "true" ]]; then
                 # Fetch PR data and update resolved variables to point to PR head
-                pr_data=$(gh pr view --json headRefName,headRepository,headRepositoryOwner,number,title -- "$pr_input" 2>/dev/null || echo "")
+                pr_data=$(gh api repos/${{ github.repository }}/pulls/"$pr_input" 2>/dev/null || echo "")
                 if [[ -n "$pr_data" ]]; then
-                  source_branch=$(echo "$pr_data" | jq -r '.headRefName // empty')
-                  source_repo=$(echo "$pr_data" | jq -r '.headRepository.nameWithOwner // empty')
-                  source_owner=$(echo "$pr_data" | jq -r '.headRepositoryOwner.login // empty')
-                  source_repo_name=$(echo "$pr_data" | jq -r '.headRepository.name // empty')
+                  source_branch=$(echo "$pr_data" | jq -r '.head.ref // empty')
+                  source_repo=$(echo "$pr_data" | jq -r '.head.repo.full_name // empty')
+                  source_owner=$(echo "$pr_data" | jq -r '.head.repo.owner.login // empty')
+                  source_repo_name=$(echo "$pr_data" | jq -r '.head.repo.name // empty')
+                  source_sha=$(echo "$pr_data" | jq -r '.head.sha // empty')
                   pr_title=$(echo "$pr_data" | jq -r '.title // empty')
+                  pr_draft=$(echo "$pr_data" | jq -r '.draft // false')
+                  source_is_fork=$(echo "$pr_data" | jq -r '.head.repo.fork // false')
+                  
+                  target_branch=$(echo "$pr_data" | jq -r '.base.ref // empty')
+                  target_repo=$(echo "$pr_data" | jq -r '.base.repo.full_name // empty')
+                  target_owner=$(echo "$pr_data" | jq -r '.base.repo.owner.login // empty')
+                  target_repo_name=$(echo "$pr_data" | jq -r '.base.repo.name // empty')
+                  target_sha=$(echo "$pr_data" | jq -r '.base.sha // empty')
 
                   if [[ -n "$source_branch" ]]; then
                     # Update resolved variables to point to PR head
@@ -359,9 +372,34 @@ runs:
                     CI_VARS["resolved-repo-owner"]="$source_owner"
                     CI_VARS["resolved-repo-name"]="$source_repo_name"
                     CI_VARS["resolved-git-branch-url"]="https://github.com/$source_repo/tree/$source_branch"
+                    CI_VARS["resolved-git-commit-url"]="https://github.com/$source_repo/commit/$source_sha"
+                    CI_VARS["resolved-git-sha"]="$source_sha"
                     CI_VARS["pr-title"]="$pr_title"
+                    CI_VARS["pr-draft"]="$pr_draft"
                     CI_VARS["pr-url"]="https://github.com/${{ github.repository }}/pull/$pr_input"
                     CI_VARS["is-pr"]="true"
+                    
+                    # Populate pr-source-* variables
+                    CI_VARS["pr-source-git-ref"]="refs/heads/$source_branch"
+                    CI_VARS["pr-source-git-branch"]="$source_branch"
+                    CI_VARS["pr-source-git-sha"]="$source_sha"
+                    CI_VARS["pr-source-repo-name-full"]="$source_repo"
+                    CI_VARS["pr-source-repo-owner"]="$source_owner"
+                    CI_VARS["pr-source-repo-name"]="$source_repo_name"
+                    CI_VARS["pr-source-is-fork"]="$source_is_fork"
+                    CI_VARS["pr-source-git-branch-url"]="https://github.com/$source_repo/tree/$source_branch"
+                    CI_VARS["pr-source-git-commit-url"]="https://github.com/$source_repo/commit/$source_sha"
+                    
+                    # Populate pr-target-* variables
+                    CI_VARS["pr-target-git-ref"]="refs/heads/$target_branch"
+                    CI_VARS["pr-target-git-branch"]="$target_branch"
+                    CI_VARS["pr-target-git-sha"]="$target_sha"
+                    CI_VARS["pr-target-repo-name-full"]="$target_repo"
+                    CI_VARS["pr-target-repo-owner"]="$target_owner"
+                    CI_VARS["pr-target-repo-name"]="$target_repo_name"
+                    CI_VARS["pr-target-git-branch-url"]="https://github.com/$target_repo/tree/$target_branch"
+                    CI_VARS["pr-target-git-commit-url"]="https://github.com/$target_repo/commit/$target_sha"
+                    CI_VARS["pr-target-git-tag"]=""
                   fi
                 fi
               fi
