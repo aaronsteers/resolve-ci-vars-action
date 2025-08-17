@@ -231,8 +231,8 @@ runs:
         CI_VARS["repo-owner"]="${{ github.repository_owner }}"
         repo_name="${{ github.event.repository.name }}"
         if [[ -z "$repo_name" ]]; then
-          repo_name="${{ github.repository }}"
-          repo_name="${repo_name##*/}"
+          repo_full="${{ github.repository }}"
+          repo_name="${repo_full##*/}"
         fi
         CI_VARS["repo-name"]="$repo_name"
         CI_VARS["repo-name-full"]="${{ github.event.pull_request.base.repo.full_name || github.repository }}"
@@ -271,13 +271,13 @@ runs:
         if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.pr }}" ]]; then
           # Validate PR input to prevent command injection
           pr_input="${{ inputs.pr }}"
-          if [[ "$pr_input" =~ ^[0-9]+$ ]]; then
+          if [[ "$pr_input" =~ ^[0-9]+$ ]] || [[ "$pr_input" =~ ^https://github\.com/[^/]+/[^/]+/pull/[0-9]+$ ]]; then
             echo "Resolving source-branch for PR $pr_input..."
             if command -v gh >/dev/null 2>&1; then
               source_branch=$(gh pr view "$pr_input" --json headRefName --jq '.headRefName' 2>/dev/null || echo "")
               if [[ -n "$source_branch" ]]; then
                 CI_VARS["source-branch"]="$source_branch"
-                # Also update source-repository to match the PR's head repo for consistency
+                # Also update source-repo to match the PR's head repo for consistency
                 source_repo=$(gh pr view "$pr_input" --json headRepository --jq '.headRepository.nameWithOwner' 2>/dev/null || echo "")
                 if [[ -n "$source_repo" ]]; then
                   CI_VARS["source-repo"]="$source_repo"
@@ -289,7 +289,7 @@ runs:
               CI_VARS["source-branch"]="${{ github.ref_name }}"
             fi
           else
-            echo "Warning: Invalid PR input '$pr_input'. Must be a PR number." >&2
+            echo "Error: Invalid PR input '$pr_input'. Must be a PR number or valid PR URL." >&2
             CI_VARS["source-branch"]="${{ github.ref_name }}"
           fi
         fi
