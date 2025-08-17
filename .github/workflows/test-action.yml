@@ -49,8 +49,8 @@ jobs:
 
           echo "✅ All tests passed!"
           echo "Static outputs:"
-          echo "  username: ${{ steps.test-vars.outputs.username }}"
-          echo "  environment: ${{ steps.test-vars.outputs.environment }}"
+          echo "  username: ${{ fromJSON(steps.test-vars.outputs.all).username }}"
+          echo "  environment: ${{ fromJSON(steps.test-vars.outputs.all).environment }}"
           # echo "Jinja outputs:"
-          # echo "  greeting: ${{ steps.test-vars.outputs.greeting }}"
-          # echo "  is_prod: ${{ steps.test-vars.outputs.is_prod }}"
+          # echo "  greeting: ${{ fromJSON(steps.test-vars.outputs.all).greeting }}"
+          # echo "  is_prod: ${{ fromJSON(steps.test-vars.outputs.all).is_prod }}"
