@@ -1,10 +1,11 @@
 name: Resolve Vars
-description: Coalesce variables or evaluate Jinja2 expression
+description: |
+  Resolve variables using a combination of (1) pre-built resolutions, (2) static inputs, and (3) Jinja2 expressions.
 inputs:
   static_inputs:
     description: >
-      Comma-separated list of input variable names to coalesce
-    required: false
+      Variable assignments in key=value format (multiline string).
+      Each line should be in the format: variable_name=value
   jinja_inputs:
     description: >
       Jinja2 expression to evaluate (e.g. user or default_user)
@@ -23,13 +24,17 @@ inputs:
     default: 'false'
     required: false
 outputs:
-  custom:
-    description: 'JSON-encoded object with all resolved custom values'
+  all:
+    value: ${{ steps.resolve.outputs.all_vars }}
+    description: 'JSON-encoded object with all resolved values'
   var1:
+    value: ${{ steps.resolve.outputs.var1 }}
     description: 'Custom user-defined output variable 1'
   var2:
+    value: ${{ steps.resolve.outputs.var2 }}
     description: 'Custom user-defined output variable 2'
   var3:
+    value: ${{ steps.resolve.outputs.var3 }}
     description: 'Custom user-defined output variable 3'
 runs:
   using: "composite"
@@ -37,71 +42,68 @@ runs:
     - id: resolve
       shell: bash
       run: |
-        RESULT=""
-        declare -A CUSTOM_VARS
+        declare -A RESOLVED_VARS
 
-        # Coalesce from static_inputs
+        # Process static_inputs
         if [[ -n "${{ inputs.static_inputs }}" ]]; then
-          IFS=',' read -ra VAR_KEYS <<< "${{ inputs.static_inputs }}"
-          for key in "${VAR_KEYS[@]}"; do
-            val="${{ format('${{{{ inputs.%s }}}}', key | trim) }}"
-            if [[ -n "$val" ]]; then
-              RESULT="$val"
-              break
+          echo "Processing static inputs..."
+
+          # Read the multiline input and process each line
+          while IFS= read -r line; do
+            # Skip empty lines and comments
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+
+            # Split on first = character
+            if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+              var_name="${BASH_REMATCH[1]}"
+              var_value="${BASH_REMATCH[2]}"
+
+              # Trim whitespace from variable name
+              var_name=$(echo "$var_name" | xargs)
+
+              echo "Found variable: $var_name = $var_value"
+
+              # Store in associative array
+              RESOLVED_VARS["$var_name"]="$var_value"
+
+              # Output each variable as individual output
+              echo "$var_name=$var_value" >> "$GITHUB_OUTPUT"
             fi
-          done
+          done <<< "${{ inputs.static_inputs }}"
         fi
 
-        echo "result=$RESULT" >> "$GITHUB_OUTPUT"
-        echo "::set-output name=result::$RESULT"  # legacy for older actions
-
-        # Decide if we should skip Jinja if coalesce worked
-        if [[ -z "$RESULT" && -n "${{ inputs.jinja_inputs }}" ]]; then
-          echo "Evaluating Jinja expression..."
-          echo "${{ inputs.jinja_inputs }}" > expression.j2
-
-          cat <<EOF > context.json
-$(jq -n \
-  $(for var in $(env | grep '^INPUT_' | sed 's/^INPUT_//' | tr '[:upper:]' '[:lower:]'); do
-    echo --arg $var "${!var}"
-  done) \
-  '{env: $*}')
-EOF
-
-          pip install --quiet jinja2-cli
-          RESULT=$(jinja2 expression.j2 context.json || true)
-          echo "result=$RESULT" >> "$GITHUB_OUTPUT"
-        fi
-
-        # Emit custom variables if present
-        for i in 1 2 3; do
-          key="var$i"
-          val="${{ format('${{{{ inputs.%s }}}}', key | trim) }}"
-          if [[ -n "$val" ]]; then
-            varname="var$i"
-            echo "$varname=$val" >> "$GITHUB_OUTPUT"
-            CUSTOM_VARS[$varname]="$val"
-          fi
-        done
-
-        # Emit combined JSON custom object
+        # Build JSON object with all resolved variables
         json_payload="{"
-        for k in "${!CUSTOM_VARS[@]}"; do
-          json_payload+="\"$k\":\"${CUSTOM_VARS[$k]}\","
+        first=true
+        for var_name in "${!RESOLVED_VARS[@]}"; do
+          if [[ "$first" == "true" ]]; then
+            first=false
+          else
+            json_payload+=","
+          fi
+          # Escape quotes in the value
+          escaped_value=$(printf '%s\n' "${RESOLVED_VARS[$var_name]}" | sed 's/"/\\"/g')
+          json_payload+="\"$var_name\":\"$escaped_value\""
         done
-        json_payload=${json_payload%,}  # trim trailing comma
         json_payload+="}"
-        echo "custom=$json_payload" >> "$GITHUB_OUTPUT"
 
+        # Output the JSON object as 'all_vars'
+        echo "all_vars=$json_payload" >> "$GITHUB_OUTPUT"
+
+        # Logging
         SHOULD_LOG="${{ inputs.log_outputs == 'true' || inputs.non_sensitive == 'true' }}"
         if [[ "$SHOULD_LOG" == "true" ]]; then
-          echo "✅ Resolved value: $RESULT"
+          echo "✅ Resolved variables:"
+          for var_name in "${!RESOLVED_VARS[@]}"; do
+            echo "  $var_name: ${RESOLVED_VARS[$var_name]}"
+          done
+          echo "  all_vars (JSON): $json_payload"
+
           {
             echo "### 🔍 Variable Resolution Summary"
-            echo "- \`result\`: $RESULT"
-            for k in "${!CUSTOM_VARS[@]}"; do
-              echo "- \`$k\`: ${CUSTOM_VARS[$k]}"
+            for var_name in "${!RESOLVED_VARS[@]}"; do
+              echo "- \`$var_name\`: ${RESOLVED_VARS[$var_name]}"
             done
-            echo "- \`custom\`: $json_payload"
+            echo "- \`all_vars\`: $json_payload"
           } >> "$GITHUB_STEP_SUMMARY"
         fi

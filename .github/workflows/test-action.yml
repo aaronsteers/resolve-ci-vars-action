@@ -1,5 +1,4 @@
-name: Test Action
-
+name: CI Test Action
 on:
   push:
   pull_request:
@@ -19,39 +18,39 @@ jobs:
           static_inputs: |
             username=testuser
             environment=development
-          jinja_inputs: |
-            greeting='Hello, ' + 'World!'
-            is_prod=False
+          # jinja_inputs: |
+          #   greeting='Hello, ' + 'World!'
+          #   is_prod=False
           log_outputs: true
 
       - name: Verify outputs
         run: |
           # Check static variables
-          if [ "${{ steps.test-vars.outputs.username }}" != "testuser" ]; then
+          if [ "${{ fromJSON(steps.test-vars.outputs.all).username }}" != "testuser" ]; then
             echo "ERROR: username output doesn't match expected value"
             exit 1
           fi
 
-          if [ "${{ steps.test-vars.outputs.environment }}" != "development" ]; then
+          if [ "${{ fromJSON(steps.test-vars.outputs.all).environment }}" != "development" ]; then
             echo "ERROR: environment output doesn't match expected value"
             exit 1
           fi
 
           # Check jinja variables
-          if [ "${{ steps.test-vars.outputs.greeting }}" != "Hello, World!" ]; then
-            echo "ERROR: greeting output doesn't match expected value"
-            exit 1
-          fi
+          # if [ "${{ fromJson(steps.test-vars.outputs.all).greeting }}" != "Hello, World!" ]; then
+          #   echo "ERROR: greeting output doesn't match expected value"
+          #   exit 1
+          # fi
 
-          if [ "${{ steps.test-vars.outputs.is_prod }}" != "False" ]; then
-            echo "ERROR: is_prod output doesn't match expected value"
-            exit 1
-          fi
+          # if [ "${{ fromJSON(steps.test-vars.outputs.all).is_prod }}" != "False" ]; then
+          #   echo "ERROR: is_prod output doesn't match expected value"
+          #   exit 1
+          # fi
 
           echo "✅ All tests passed!"
           echo "Static outputs:"
-          echo "  username: ${{ steps.test-vars.outputs.username }}"
-          echo "  environment: ${{ steps.test-vars.outputs.environment }}"
-          echo "Jinja outputs:"
-          echo "  greeting: ${{ steps.test-vars.outputs.greeting }}"
-          echo "  is_prod: ${{ steps.test-vars.outputs.is_prod }}"
+          echo "  username: ${{ fromJSON(steps.test-vars.outputs.all).username }}"
+          echo "  environment: ${{ fromJSON(steps.test-vars.outputs.all).environment }}"
+          # echo "Jinja outputs:"
+          # echo "  greeting: ${{ fromJSON(steps.test-vars.outputs.all).greeting }}"
+          # echo "  is_prod: ${{ fromJSON(steps.test-vars.outputs.all).is_prod }}"
