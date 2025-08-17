@@ -217,7 +217,7 @@ runs:
               var_name="${BASH_REMATCH[1]}"
               var_value="${BASH_REMATCH[2]}"
               var_name=$(echo "$var_name" | xargs)
-              echo "Found Jinja variable: $var_name = $var_value"
+              echo "Found resolved Jinja variable: $var_name = $var_value"
               RESOLVED_VARS["$var_name"]="$var_value"
               echo "$var_name=$var_value" >> "$GITHUB_OUTPUT"
             fi
