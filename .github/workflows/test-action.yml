@@ -1,5 +1,4 @@
-name: Test Action
-# dummy change
+name: CI Test Action
 on:
   push:
   pull_request:
@@ -27,23 +26,23 @@ jobs:
       - name: Verify outputs
         run: |
           # Check static variables
-          if [ "${{ fromJSON(steps.test-vars.outputs.custom).username }}" != "testuser" ]; then
+          if [ "${{ fromJSON(steps.test-vars.outputs.all).username }}" != "testuser" ]; then
             echo "ERROR: username output doesn't match expected value"
             exit 1
           fi
 
-          if [ "${{ fromJSON(steps.test-vars.outputs.custom).environment }}" != "development" ]; then
+          if [ "${{ fromJSON(steps.test-vars.outputs.all).environment }}" != "development" ]; then
             echo "ERROR: environment output doesn't match expected value"
             exit 1
           fi
 
           # Check jinja variables
-          # if [ "${{ fromJson(steps.test-vars.outputs).greeting }}" != "Hello, World!" ]; then
+          # if [ "${{ fromJson(steps.test-vars.outputs.all).greeting }}" != "Hello, World!" ]; then
           #   echo "ERROR: greeting output doesn't match expected value"
           #   exit 1
           # fi
 
-          # if [ "${{ fromJSON(steps.test-vars.outputs).is_prod }}" != "False" ]; then
+          # if [ "${{ fromJSON(steps.test-vars.outputs.all).is_prod }}" != "False" ]; then
           #   echo "ERROR: is_prod output doesn't match expected value"
           #   exit 1
           # fi
