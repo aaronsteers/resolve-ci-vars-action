@@ -193,21 +193,12 @@ runs:
           temp_jinja_template="$GITHUB_WORKSPACE/.temp_template.j2"
           temp_jinja_output="$GITHUB_WORKSPACE/.temp_output.txt"
 
-          # Write current resolved variables to JSON file
-          echo "{" > "$temp_vars_file"
-          first=true
+          # Write current resolved variables to JSON file using jq
+          json_vars="{}"
           for var_name in "${!RESOLVED_VARS[@]}"; do
-            if [[ "$first" == "true" ]]; then
-              first=false
-            else
-              echo "," >> "$temp_vars_file"
-            fi
-            # Escape quotes in the value for JSON
-            escaped_value=$(printf '%s\n' "${RESOLVED_VARS[$var_name]}" | sed 's/"/\\"/g')
-            echo -n "  \"$var_name\": \"$escaped_value\"" >> "$temp_vars_file"
+            json_vars=$(echo "$json_vars" | jq --arg key "$var_name" --arg value "${RESOLVED_VARS[$var_name]}" '. + {($key): $value}')
           done
-          echo "" >> "$temp_vars_file"
-          echo "}" >> "$temp_vars_file"
+          echo "$json_vars" > "$temp_vars_file"
 
           # Save jinja_inputs and temp files to environment for next step
           # Set environment variables for the jinja renderer
@@ -225,9 +216,9 @@ runs:
           else
             json_payload+=","
           fi
-          # Escape quotes in the value
-          escaped_value=$(printf '%s\n' "${RESOLVED_VARS[$var_name]}" | sed 's/"/\\"/g')
-          json_payload+="\"$var_name\":\"$escaped_value\""
+          # Properly escape the value for JSON using jq
+          escaped_value=$(jq -R . <<< "${RESOLVED_VARS[$var_name]}")
+          json_payload+="\"$var_name\":${escaped_value}"
         done
         json_payload+="}"
 
@@ -436,22 +427,13 @@ runs:
         done
         
         # Store CI variables for merge step
-        ci_vars_json="{"
-        first=true
+        ci_vars_json="{}"
         for var_name in "${!CI_VARS[@]}"; do
           var_value="${CI_VARS[$var_name]}"
           if [[ -n "$var_value" && "$var_value" != "null" && "$var_value" != "" ]]; then
-            if [[ "$first" == "true" ]]; then
-              first=false
-            else
-              ci_vars_json+=","
-            fi
-            # Escape quotes in the value for JSON
-            escaped_value=$(printf '%s\n' "$var_value" | sed 's/"/\\"/g')
-            ci_vars_json+="\"$var_name\":\"$escaped_value\""
+            ci_vars_json=$(echo "$ci_vars_json" | jq --arg key "$var_name" --arg value "$var_value" '. + {($key): $value}')
           fi
         done
-        ci_vars_json+="}"
         echo "CI_VARS_JSON=$ci_vars_json" >> "$GITHUB_ENV"
 
     # Process Jinja inputs using external action if jinja_inputs provided
@@ -575,20 +557,11 @@ runs:
           rm -f "$TEMP_VARS_FILE" "$TEMP_JINJA_TEMPLATE" "$TEMP_JINJA_OUTPUT"
         fi
 
-        # Build final JSON object with all resolved variables
-        json_payload="{"
-        first=true
+        # Build final JSON object with all resolved variables using jq
+        json_payload="{}"
         for var_name in "${!RESOLVED_VARS[@]}"; do
-          if [[ "$first" == "true" ]]; then
-            first=false
-          else
-            json_payload+=","
-          fi
-          # Escape quotes in the value
-          escaped_value=$(printf '%s\n' "${RESOLVED_VARS[$var_name]}" | sed 's/"/\\"/g')
-          json_payload+="\"$var_name\":\"$escaped_value\""
+          json_payload=$(echo "$json_payload" | jq --arg key "$var_name" --arg value "${RESOLVED_VARS[$var_name]}" '. + {($key): $value}')
         done
-        json_payload+="}"
 
         # Output the JSON object as 'custom'
         echo "custom=$json_payload" >> "$GITHUB_OUTPUT"
