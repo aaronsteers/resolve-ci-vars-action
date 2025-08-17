@@ -1,0 +1,37 @@
+name: AI Help Command
+
+on:
+  workflow_dispatch:
+    inputs:
+      # The following 2 inputs are always passed by the Slash Command Dispatch:
+      comment-id:
+        description: Comment ID. Optional.
+        required: false
+      issue-number:
+        description: Issue Number. Optional.
+        type: string
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  ai-ask:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Devin AI Help
+        uses: ./
+        with:
+          comment-id: ${{ github.event.inputs.comment-id }}
+          issue-number: ${{ github.event.inputs.issue-number }}
+          playbook-macro: "!issue_ask"
+          devin-token: ${{ secrets.DEVIN_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          start-message: "💡 **Getting AI assistance...**"

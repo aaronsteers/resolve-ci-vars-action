@@ -1,0 +1,37 @@
+name: AI Fix Command
+
+on:
+  workflow_dispatch:
+    inputs:
+      # The following 2 inputs are always passed by the Slash Command Dispatch:
+      comment-id:
+        description: Comment ID. Optional.
+        required: false
+      issue-number:
+        description: Issue Number. Optional.
+        type: string
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  ai-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Devin AI Fix
+        uses: ./
+        with:
+          comment-id: ${{ github.event.inputs.comment-id }}
+          issue-number: ${{ github.event.inputs.issue-number }}
+          playbook-macro: "!issue_fix"
+          devin-token: ${{ secrets.DEVIN_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          start-message: "🔧 **Running AI fix analysis...**"
