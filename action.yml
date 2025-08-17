@@ -211,6 +211,8 @@ runs:
           echo "=== End Jinja output ==="
 
           echo "Processing Jinja results..."
+          # Append a newline at the end of the file before we start
+          echo "" >> "$TEMP_JINJA_OUTPUT"
           while IFS= read -r line; do
             [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
             if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
@@ -222,8 +224,6 @@ runs:
               echo "$var_name=$var_value" >> "$GITHUB_OUTPUT"
             fi
           done < "$TEMP_JINJA_OUTPUT"
-          # Append a newline at the end of the file
-          echo "" >> "$TEMP_JINJA_OUTPUT"
 
           # Clean up temp files
           rm -f "$TEMP_VARS_FILE" "$TEMP_JINJA_TEMPLATE" "$TEMP_JINJA_OUTPUT"
