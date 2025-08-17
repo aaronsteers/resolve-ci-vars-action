@@ -81,29 +81,29 @@ For help with Jinja2 expressions, check out these resources:
 
 ### Standard CI Vars
 
-Enable automatic resolution of common CI variables with `standard_ci_vars: true`. This eliminates the need for complex expressions like `${{ github.event.pull_request.head.repo.full_name || github.repository }}` throughout your workflows.
+When `standard_ci_vars` is enabled (default: `true`), the action automatically resolves common CI variables from GitHub context, eliminating the need for complex expressions like `${{ github.event.pull_request.head.repo.full_name || github.repository }}` throughout your workflows.
 
 #### Standard CI Variables Reference
 
 | Variable | Description | Resolves From | Example Value |
 |----------|-------------|---------------|---------------|
 | **Repository & Git Context** |
-| `repo` | Target repository (base repo in owner/name format) | `github.repository` or `github.event.pull_request.base.repo.full_name` | `airbytehq/airbyte` |
-| `repo-owner` | Target repository owner/organization | `github.repository_owner` | `airbytehq` |
-| `repo-name` | Target repository name only | Repository name from base repo | `airbyte` |
-| `head-ref` | Source branch/ref being merged (null for issues) | `github.head_ref` or `github.ref_name` | `feature/new-connector` |
-| `base-ref` | Target branch/ref for merge (null for issues) | `github.base_ref` or default branch | `main` |
-| `head-repo` | Source repository (important for forks, null for issues) | `github.event.pull_request.head.repo.full_name` | `contributor/airbyte` |
-| `base-repo` | Target repository (same as `repo`, null for issues) | `github.event.pull_request.base.repo.full_name` | `airbytehq/airbyte` |
-| `head-sha` | Head commit SHA (null for issues) | `github.event.pull_request.head.sha` | `abc123...` |
-| `base-sha` | Base commit SHA (null for issues) | `github.event.pull_request.base.sha` | `def456...` |
-| `gitref` | Smart ref resolution (null for issues) | PR head ref when `pr` input exists, otherwise `github.ref_name` | `feature/branch` |
+| `target-repository` | Target repository (base repo in owner/name format) | `github.repository` or `github.event.pull_request.base.repo.full_name` | `airbytehq/airbyte` |
+| `repository-owner` | Repository owner/organization | `github.repository_owner` | `airbytehq` |
+| `repo-name` | Repository name only | `github.event.repository.name` or extracted from repository | `airbyte` |
+| `repo-name-full` | Full repository name (owner/name) | Same as `target-repository` | `airbytehq/airbyte` |
+| `source-branch` | Source branch being merged (null for issues) | `github.head_ref` or `github.ref_name` | `feature/new-connector` |
+| `target-branch` | Target branch for merge (null for issues) | `github.base_ref` or default branch | `main` |
+| `source-repository` | Source repository (important for forks, null for issues) | `github.event.pull_request.head.repo.full_name` | `contributor/airbyte` |
+| `source-sha` | Source commit SHA (null for issues) | `github.event.pull_request.head.sha` | `abc123...` |
+| `target-sha` | Target commit SHA (null for issues) | `github.event.pull_request.base.sha` | `def456...` |
+| `restricted-security-mode` | Whether running in restricted security mode | `true` when from fork/dependabot and trigger is `pull_request` | `true` |
 | **Pull Request Variables** |
 | `pr-number` | Pull request number | `github.event.pull_request.number` or `github.event.issue.number` | `12345` |
 | `pr-title` | Pull request title | `github.event.pull_request.title` | `feat: Add new connector` |
 | `pr-author` | Pull request author username | `github.event.pull_request.user.login` | `contributor` |
 | `pr-draft` | Whether PR is draft | `github.event.pull_request.draft` | `true` |
-| `is-pr-from-fork` | Whether PR is from a fork | `github.event.pull_request.head.repo.fork` | `true` |
+| `pr-from-fork` | Whether PR is from a fork | `github.event.pull_request.head.repo.fork` | `true` |
 | **Issue Variables** |
 | `issue-number` | Issue number (equals pr-number for PRs) | `github.event.issue.number` or `github.event.pull_request.number` | `12345` |
 | `issue-title` | Issue title | `github.event.issue.title` or `github.event.pull_request.title` | `Bug: Fix connector issue` |
@@ -114,8 +114,8 @@ Enable automatic resolution of common CI variables with `standard_ci_vars: true`
 | `comment-author` | Comment author username | `github.event.comment.user.login` | `maintainer` |
 | `comment-body` | Comment body text | `github.event.comment.body` | `/test connector` |
 | **Workflow Context** |
-| `trigger-type` | Event that triggered workflow | `github.event_name` | `pull_request` |
-| `actor` | User who triggered the workflow | `github.actor` | `contributor` |
+| `trigger-event` | Event that triggered workflow | `github.event_name` | `pull_request` |
+| `workflow-actor` | User who triggered the workflow | `github.actor` | `contributor` |
 | `run-id` | Workflow run ID | `github.run_id` | `123456789` |
 | `run-number` | Workflow run number | `github.run_number` | `42` |
 
@@ -133,15 +133,16 @@ Enable automatic resolution of common CI variables with `standard_ci_vars: true`
 - name: Use resolved variables
   run: |
     echo "PR Number: ${{ steps.vars.outputs.pr-number }}"
-    echo "Head Ref: ${{ steps.vars.outputs.head-ref }}"
-    echo "Repository: ${{ steps.vars.outputs.repo }}"
+    echo "Source Branch: ${{ steps.vars.outputs.source-branch }}"
+    echo "Repository: ${{ steps.vars.outputs.target-repository }}"
     echo "All variables: ${{ steps.vars.outputs.all }}"
 ```
 
 **Key Features:**
-- **Smart gitref resolution**: Handles "run from main, operate on PR branch" pattern for slash commands
+- **Smart source-branch resolution**: Handles "run from main, operate on PR branch" pattern for slash commands
 - **Issue-aware**: Git refs are null for issue events since issues don't have branches
-- **Fork-friendly**: Properly distinguishes between head and base repositories
+- **Fork-friendly**: Properly distinguishes between source and target repositories
+- **Security-aware**: Detects restricted security mode for fork/dependabot PRs
 - **Trigger-agnostic**: Works with pull_request, workflow_dispatch, issue_comment, and more
 
 ---
@@ -191,7 +192,7 @@ jobs:
 |----------------|-----------------------------------------------------------------------------------------------------|----------|---------|
 | `static_inputs`| Variable assignments in key=value format (multiline string)                                        | ❌       |         |
 | `jinja_inputs` | Jinja2 expressions to evaluate (e.g. `user or default_user`)                                       | ❌       |         |
-| `standard_ci_vars` | Whether to automatically resolve standard CI variables from GitHub context                     | ❌       | `false` |
+| `standard_ci_vars` | Whether to automatically resolve standard CI variables from GitHub context                     | ❌       | `true` |
 | `log_outputs`  | Whether to log resolved values to the console and step summary                                      | ❌       | `false` |
 | `non_sensitive`| Alias for `log_outputs`                                                                            | ❌       | `false` |
 
