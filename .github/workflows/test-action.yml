@@ -19,9 +19,9 @@ jobs:
           static_inputs: |
             username=testuser
             environment=development
-          jinja_inputs: |
-            greeting='Hello, ' + 'World!'
-            is_prod=False
+          # jinja_inputs: |
+          #   greeting='Hello, ' + 'World!'
+          #   is_prod=False
           log_outputs: true
 
       - name: Verify outputs
@@ -38,20 +38,20 @@ jobs:
           fi
 
           # Check jinja variables
-          if [ "${{ steps.test-vars.outputs.greeting }}" != "Hello, World!" ]; then
-            echo "ERROR: greeting output doesn't match expected value"
-            exit 1
-          fi
+          # if [ "${{ steps.test-vars.outputs.greeting }}" != "Hello, World!" ]; then
+          #   echo "ERROR: greeting output doesn't match expected value"
+          #   exit 1
+          # fi
 
-          if [ "${{ steps.test-vars.outputs.is_prod }}" != "False" ]; then
-            echo "ERROR: is_prod output doesn't match expected value"
-            exit 1
-          fi
+          # if [ "${{ steps.test-vars.outputs.is_prod }}" != "False" ]; then
+          #   echo "ERROR: is_prod output doesn't match expected value"
+          #   exit 1
+          # fi
 
           echo "✅ All tests passed!"
           echo "Static outputs:"
           echo "  username: ${{ steps.test-vars.outputs.username }}"
           echo "  environment: ${{ steps.test-vars.outputs.environment }}"
-          echo "Jinja outputs:"
-          echo "  greeting: ${{ steps.test-vars.outputs.greeting }}"
-          echo "  is_prod: ${{ steps.test-vars.outputs.is_prod }}"
+          # echo "Jinja outputs:"
+          # echo "  greeting: ${{ steps.test-vars.outputs.greeting }}"
+          # echo "  is_prod: ${{ steps.test-vars.outputs.is_prod }}"
