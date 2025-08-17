@@ -156,7 +156,8 @@ runs:
 
             echo "$NEW_JINJA_LINE" >> "$TEMP_JINJA_TEMPLATE"
           fi
-        done < <(printf '%s\n' '${{ inputs.jinja_inputs }}')
+        done <<< "${{ inputs.jinja_inputs + '\n' }}"
+
 
         # Debug: Print the template file contents
         echo "=== Generated Jinja template ==="
