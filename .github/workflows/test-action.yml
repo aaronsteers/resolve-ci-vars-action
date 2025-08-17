@@ -94,3 +94,85 @@ jobs:
           echo "  is_prod: ${{ fromJSON(steps.test-vars.outputs.all).is_prod }}"
           echo "  computed_name: ${{ fromJSON(steps.test-vars.outputs.all).computed_name }}"
           echo "  port_number: ${{ fromJSON(steps.test-vars.outputs.all).port_number }}"
+
+  test-standard-ci-vars:
+    name: Test Standard CI Variables
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test standard CI vars enabled
+        id: test-ci-vars
+        uses: ./
+        with:
+          standard_ci_vars: true
+          log_outputs: true
+          static_inputs: |
+            custom_var=test_value
+
+      - name: Print CI variables output
+        run: |
+          echo "=== DEBUG: Standard CI Variables ==="
+          echo "All variables: ${{ steps.test-ci-vars.outputs.all }}"
+          echo "Repository: ${{ steps.test-ci-vars.outputs.repo }}"
+          echo "Trigger type: ${{ steps.test-ci-vars.outputs.trigger-type }}"
+          echo "Actor: ${{ steps.test-ci-vars.outputs.actor }}"
+          echo "=================================="
+
+      - name: Verify standard CI variables
+        run: |
+          # Check that standard CI variables are populated
+          if [ -z "${{ steps.test-ci-vars.outputs.repo }}" ]; then
+            echo "ERROR: repo variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.trigger-type }}" ]; then
+            echo "ERROR: trigger-type variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.actor }}" ]; then
+            echo "ERROR: actor variable should be populated"
+            exit 1
+          fi
+
+          # Verify repo matches expected format
+          if [ "${{ steps.test-ci-vars.outputs.repo }}" != "aaronsteers/resolve-vars-action" ]; then
+            echo "ERROR: repo should be aaronsteers/resolve-vars-action"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.repo }}"
+            exit 1
+          fi
+
+          # Check that custom variables are still included
+          if [ "${{ fromJSON(steps.test-ci-vars.outputs.all).custom_var }}" != "test_value" ]; then
+            echo "ERROR: custom_var should still be included with standard CI vars"
+            exit 1
+          fi
+
+          echo "✅ Standard CI variables test passed!"
+
+      - name: Test standard CI vars disabled (backward compatibility)
+        id: test-no-ci-vars
+        uses: ./
+        with:
+          standard_ci_vars: false
+          static_inputs: |
+            test_var=backward_compat
+
+      - name: Verify backward compatibility
+        run: |
+          # Ensure CI variables are NOT populated when disabled
+          if [ -n "${{ steps.test-no-ci-vars.outputs.repo }}" ]; then
+            echo "ERROR: repo should not be populated when standard_ci_vars is false"
+            exit 1
+          fi
+
+          # Ensure custom variables still work
+          if [ "${{ fromJSON(steps.test-no-ci-vars.outputs.all).test_var }}" != "backward_compat" ]; then
+            echo "ERROR: custom variables should still work when standard_ci_vars is false"
+            exit 1
+          fi
+
+          echo "✅ Backward compatibility test passed!"

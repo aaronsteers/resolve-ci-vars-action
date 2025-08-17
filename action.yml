@@ -23,6 +23,13 @@ inputs:
       Alias for log_outputs (true = show evaluated output)
     default: 'false'
     required: false
+  standard_ci_vars:
+    description: >
+      Whether to automatically resolve standard CI variables from GitHub context.
+      When enabled, variables like pr-number, head-ref, base-ref, etc. are automatically
+      populated based on the trigger type.
+    default: 'false'
+    required: false
 outputs:
   all:
     value: ${{ steps.merge-results.outputs.all_vars }}
@@ -122,6 +129,126 @@ runs:
         # Save initial JSON for potential jinja processing
         echo "INITIAL_JSON=$json_payload" >> "$GITHUB_ENV"
 
+    # Process standard CI variables if enabled
+    - id: resolve-standard-ci-vars
+      if: ${{ inputs.standard_ci_vars == 'true' }}
+      shell: bash
+      run: |
+        declare -A CI_VARS
+        
+        # Repository & Git Context
+        CI_VARS["repo"]="${{ github.event.pull_request.base.repo.full_name || github.repository }}"
+        CI_VARS["repo-owner"]="${{ github.repository_owner }}"
+        CI_VARS["repo-name"]="${{ github.event.repository.name || github.repository }}"
+        
+        # Git refs - only populate for PR events, null for issue events and workflow_dispatch without pr input
+        if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_target" ]]; then
+          CI_VARS["head-ref"]="${{ github.head_ref || github.ref_name }}"
+          CI_VARS["base-ref"]="${{ github.base_ref || github.event.repository.default_branch || 'main' }}"
+          CI_VARS["head-repo"]="${{ github.event.pull_request.head.repo.full_name || github.repository }}"
+          CI_VARS["base-repo"]="${{ github.event.pull_request.base.repo.full_name || github.repository }}"
+          CI_VARS["head-sha"]="${{ github.event.pull_request.head.sha || github.sha }}"
+          CI_VARS["base-sha"]="${{ github.event.pull_request.base.sha }}"
+        elif [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.pr }}" ]]; then
+          # For workflow_dispatch with pr input, we can populate some refs but need to fetch PR data
+          CI_VARS["head-ref"]="${{ github.ref_name }}"  # This will be updated by gitref resolution
+          CI_VARS["base-ref"]="${{ github.event.repository.default_branch || 'main' }}"
+          CI_VARS["head-repo"]="${{ github.repository }}"
+          CI_VARS["base-repo"]="${{ github.repository }}"
+          CI_VARS["head-sha"]="${{ github.sha }}"
+          CI_VARS["base-sha"]=""  # Will be empty for workflow_dispatch
+        else
+          # For issue events and workflow_dispatch without pr input, null out git refs
+          CI_VARS["head-ref"]=""
+          CI_VARS["base-ref"]=""
+          CI_VARS["head-repo"]=""
+          CI_VARS["base-repo"]=""
+          CI_VARS["head-sha"]=""
+          CI_VARS["base-sha"]=""
+        fi
+        
+        # Smart gitref resolution - handles "run from main, operate on PR branch" pattern
+        if [[ "${{ github.event_name }}" == "issues" || "${{ github.event_name }}" == "issue_comment" ]]; then
+          # For issue events, null out gitref since issues don't have branches
+          CI_VARS["gitref"]=""
+        elif [[ "${{ github.event_name }}" == "workflow_dispatch" && -z "${{ inputs.pr }}" ]]; then
+          # For workflow_dispatch without pr input, we can't tell if it's from issue or PR
+          # so null out gitref to be safe
+          CI_VARS["gitref"]=""
+        elif [[ -n "${{ inputs.pr }}" ]]; then
+          # When pr input exists, we need to fetch the actual PR head ref
+          # This handles slash commands that run from main but operate on PR branch
+          echo "Resolving gitref for PR ${{ inputs.pr }}..."
+          if command -v gh >/dev/null 2>&1; then
+            gitref=$(gh pr view "${{ inputs.pr }}" --json headRefName --jq '.headRefName' 2>/dev/null || echo "")
+            if [[ -n "$gitref" ]]; then
+              CI_VARS["gitref"]="$gitref"
+            else
+              CI_VARS["gitref"]="${{ github.head_ref || github.ref_name }}"
+            fi
+          else
+            CI_VARS["gitref"]="${{ github.head_ref || github.ref_name }}"
+          fi
+        elif [[ -n "${{ github.head_ref }}" ]]; then
+          # For direct PR events
+          CI_VARS["gitref"]="${{ github.head_ref }}"
+        else
+          # Fallback to current ref
+          CI_VARS["gitref"]="${{ github.ref_name }}"
+        fi
+        
+        # Pull Request Variables
+        CI_VARS["pr-number"]="${{ github.event.pull_request.number || github.event.issue.number }}"
+        CI_VARS["pr-title"]="${{ github.event.pull_request.title }}"
+        CI_VARS["pr-author"]="${{ github.event.pull_request.user.login }}"
+        CI_VARS["pr-draft"]="${{ github.event.pull_request.draft }}"
+        CI_VARS["is-pr-from-fork"]="${{ github.event.pull_request.head.repo.fork }}"
+        
+        # Issue Variables  
+        CI_VARS["issue-number"]="${{ github.event.issue.number || github.event.pull_request.number }}"
+        CI_VARS["issue-title"]="${{ github.event.issue.title || github.event.pull_request.title }}"
+        CI_VARS["issue-author"]="${{ github.event.issue.user.login || github.event.pull_request.user.login }}"
+        CI_VARS["issue-type"]="${{ github.event.pull_request && 'pull_request' || 'issue' }}"
+        
+        # Comment Variables
+        CI_VARS["comment-id"]="${{ github.event.comment.id }}"
+        CI_VARS["comment-author"]="${{ github.event.comment.user.login }}"
+        CI_VARS["comment-body"]="${{ github.event.comment.body }}"
+        
+        # Workflow Context
+        CI_VARS["trigger-type"]="${{ github.event_name }}"
+        CI_VARS["actor"]="${{ github.actor }}"
+        CI_VARS["run-id"]="${{ github.run_id }}"
+        CI_VARS["run-number"]="${{ github.run_number }}"
+        
+        # Output each CI variable that has a value
+        for var_name in "${!CI_VARS[@]}"; do
+          var_value="${CI_VARS[$var_name]}"
+          if [[ -n "$var_value" && "$var_value" != "null" && "$var_value" != "" ]]; then
+            echo "$var_name=$var_value" >> "$GITHUB_OUTPUT"
+            echo "Resolved CI variable: $var_name = $var_value"
+          fi
+        done
+        
+        # Store CI variables for merge step
+        ci_vars_json="{"
+        first=true
+        for var_name in "${!CI_VARS[@]}"; do
+          var_value="${CI_VARS[$var_name]}"
+          if [[ -n "$var_value" && "$var_value" != "null" && "$var_value" != "" ]]; then
+            if [[ "$first" == "true" ]]; then
+              first=false
+            else
+              ci_vars_json+=","
+            fi
+            # Escape quotes in the value for JSON
+            escaped_value=$(printf '%s\n' "$var_value" | sed 's/"/\\"/g')
+            ci_vars_json+="\"$var_name\":\"$escaped_value\""
+          fi
+        done
+        ci_vars_json+="}"
+        echo "CI_VARS_JSON=$ci_vars_json" >> "$GITHUB_ENV"
+
     # Process Jinja inputs using external action if jinja_inputs provided
     - id: process-jinja
       if: ${{ inputs.jinja_inputs != '' }}
@@ -204,6 +331,18 @@ runs:
               RESOLVED_VARS["$var_name"]="$var_value"
             fi
           done <<< "${{ inputs.static_inputs }}"
+        fi
+
+        # Add CI variables to RESOLVED_VARS if standard_ci_vars is enabled
+        if [[ "${{ inputs.standard_ci_vars }}" == "true" && -n "$CI_VARS_JSON" ]]; then
+          echo "Adding standard CI variables..."
+          # Parse CI_VARS_JSON and add to RESOLVED_VARS
+          while IFS="=" read -r key value; do
+            if [[ -n "$key" && -n "$value" ]]; then
+              RESOLVED_VARS["$key"]="$value"
+              echo "Added CI variable: $key = $value"
+            fi
+          done < <(echo "$CI_VARS_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"' 2>/dev/null || echo "")
         fi
 
         # Process jinja results if they exist
