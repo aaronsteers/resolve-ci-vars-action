@@ -156,7 +156,7 @@ runs:
 
             echo "$NEW_JINJA_LINE" >> "$TEMP_JINJA_TEMPLATE"
           fi
-        done <<< "${{ inputs.jinja_inputs + '\n' }}"
+        done <<< "${{ format('{0}{1}', inputs.jinja_inputs, '\n')  }}"
 
 
         # Debug: Print the template file contents
