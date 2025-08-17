@@ -1,4 +1,4 @@
-name: Resolve Vars
+name: Resolve CI Vars
 branding:
   icon: list
   color: blue
@@ -244,7 +244,7 @@ runs:
       shell: bash
       run: |
         declare -A CI_VARS
-        
+
         # Resolved Variables (always the effective context)
         # For PRs: resolved = source (head), for other contexts: resolved = current
         if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_target" ]]; then
@@ -272,18 +272,18 @@ runs:
           fi
           CI_VARS["resolved-repo-name"]="$repo_name"
         fi
-        
+
         # Generate URLs for resolved context
         CI_VARS["resolved-git-branch-url"]="https://github.com/${CI_VARS["resolved-repo-name-full"]}/tree/${CI_VARS["resolved-git-branch"]}"
         CI_VARS["resolved-git-commit-url"]="https://github.com/${CI_VARS["resolved-repo-name-full"]}/commit/${CI_VARS["resolved-git-sha"]}"
-        
+
         # Git tag (if applicable)
         if [[ "${{ github.ref }}" =~ ^refs/tags/ ]]; then
           CI_VARS["resolved-git-tag"]="${{ github.ref_name }}"
         else
           CI_VARS["resolved-git-tag"]=""
         fi
-        
+
         # PR Source and Target Variables (only for PR events)
         if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_target" ]]; then
           # PR Source (head)
@@ -296,7 +296,7 @@ runs:
           CI_VARS["pr-source-is-fork"]="${{ github.event.pull_request.head.repo.fork }}"
           CI_VARS["pr-source-git-branch-url"]="https://github.com/${CI_VARS["pr-source-repo-name-full"]}/tree/${CI_VARS["pr-source-git-branch"]}"
           CI_VARS["pr-source-git-commit-url"]="https://github.com/${CI_VARS["pr-source-repo-name-full"]}/commit/${CI_VARS["pr-source-git-sha"]}"
-          
+
           # PR Target (base)
           CI_VARS["pr-target-git-ref"]="refs/heads/${{ github.base_ref }}"
           CI_VARS["pr-target-git-branch"]="${{ github.base_ref }}"
@@ -328,11 +328,11 @@ runs:
           CI_VARS["pr-target-git-commit-url"]=""
           CI_VARS["pr-target-git-tag"]=""
         fi
-        
+
         # Auto-detect workflow_dispatch inputs and update variables accordingly
         if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
           echo "Detecting workflow_dispatch inputs..."
-          
+
           # Auto-detect PR input (pr or pr-number)
           pr_input="${{ github.event.inputs.pr || github.event.inputs.pr-number }}"
           if [[ -n "$pr_input" ]]; then
@@ -340,7 +340,7 @@ runs:
             if [[ "$pr_input" =~ ^[0-9]+$ ]] || [[ "$pr_input" =~ ^https://github\.com/[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+/pull/[0-9]+$ ]]; then
               echo "Auto-detected PR input: $pr_input"
               CI_VARS["pr-number"]="$pr_input"
-              
+
               if [[ "${{ steps.check-gh-cli.outputs.gh-available }}" == "true" ]]; then
                 # Fetch PR data and update resolved variables to point to PR head
                 pr_data=$(gh pr view --json headRefName,headRepository,headRepositoryOwner,number,title -- "$pr_input" 2>/dev/null || echo "")
@@ -350,7 +350,7 @@ runs:
                   source_owner=$(echo "$pr_data" | jq -r '.headRepositoryOwner.login // empty')
                   source_repo_name=$(echo "$pr_data" | jq -r '.headRepository.name // empty')
                   pr_title=$(echo "$pr_data" | jq -r '.title // empty')
-                  
+
                   if [[ -n "$source_branch" ]]; then
                     # Update resolved variables to point to PR head
                     CI_VARS["resolved-git-ref"]="refs/heads/$source_branch"
@@ -369,14 +369,14 @@ runs:
               echo "Error: Invalid PR input '$pr_input'. Must be a PR number or valid PR URL." >&2
             fi
           fi
-          
+
           # Auto-detect comment-id input
           comment_id_input="${{ github.event.inputs.comment-id }}"
           if [[ -n "$comment_id_input" ]]; then
             echo "Auto-detected comment-id input: $comment_id_input"
             CI_VARS["comment-id"]="$comment_id_input"
           fi
-          
+
           # Auto-detect issue input (issue-id or issue-number)
           issue_input="${{ github.event.inputs.issue-id != '' && github.event.inputs.issue-id || github.event.inputs.issue-number }}"
           if [[ -n "$issue_input" ]]; then
@@ -388,7 +388,7 @@ runs:
             fi
           fi
         fi
-        
+
         # PR Variables
         CI_VARS["pr-number"]="${{ github.event.pull_request.number != '' && github.event.pull_request.number || github.event.issue.number }}"
         CI_VARS["pr-title"]="${{ github.event.pull_request.title }}"
@@ -397,7 +397,7 @@ runs:
         else
           CI_VARS["pr-url"]=""
         fi
-        
+
         # Comment Variables
         CI_VARS["comment-id"]="${{ github.event.comment.id }}"
         if [[ -n "${{ github.event.comment.id }}" ]]; then
@@ -405,18 +405,18 @@ runs:
         else
           CI_VARS["comment-url"]=""
         fi
-        
+
         # Additional Resolved Metadata
         CI_VARS["run-id"]="${{ github.run_id }}"
         CI_VARS["run-url"]="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        
+
         # Boolean: whether current context is a PR
         if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_target" ]]; then
           CI_VARS["is-pr"]="true"
         else
           CI_VARS["is-pr"]="false"
         fi
-        
+
         # Output each CI variable that has a value
         for var_name in "${!CI_VARS[@]}"; do
           var_value="${CI_VARS[$var_name]}"
@@ -428,7 +428,7 @@ runs:
             echo "Resolved CI variable: $var_name = (empty)"
           fi
         done
-        
+
         # Store CI variables for merge step
         ci_vars_json="{}"
         for var_name in "${!CI_VARS[@]}"; do
