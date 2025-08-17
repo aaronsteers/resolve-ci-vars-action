@@ -158,7 +158,6 @@ runs:
           fi
         done <<< "${{ format('{0}{1}', inputs.jinja_inputs, '\n')  }}"
 
-
         # Debug: Print the template file contents
         echo "=== Generated Jinja template ==="
         cat "$TEMP_JINJA_TEMPLATE"
@@ -207,6 +206,10 @@ runs:
 
         # Process jinja results if they exist
         if [[ -f "$TEMP_JINJA_OUTPUT" ]]; then
+          echo "=== Jinja output file contents ==="
+          cat "$TEMP_JINJA_OUTPUT"
+          echo "=== End Jinja output ==="
+
           echo "Processing Jinja results..."
           while IFS= read -r line; do
             [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
