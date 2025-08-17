@@ -75,10 +75,10 @@ EOF
 
         # Emit custom variables if present
         for i in 1 2 3; do
-          key="custom_$i"
+          key="var$i"
           val="${{ format('${{{{ inputs.%s }}}}', key | trim) }}"
           if [[ -n "$val" ]]; then
-            varname="VAR$i"
+            varname="var$i"
             echo "$varname=$val" >> "$GITHUB_OUTPUT"
             CUSTOM_VARS[$varname]="$val"
           fi
