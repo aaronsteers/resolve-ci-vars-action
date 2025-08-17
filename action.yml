@@ -335,34 +335,63 @@ runs:
           CI_VARS["pr-target-git-tag"]=""
         fi
         
-        # Smart resolution for workflow_dispatch with PR input
-        if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.pr }}" ]]; then
-          # Validate PR input to prevent command injection
-          pr_input="${{ inputs.pr }}"
-          if [[ "$pr_input" =~ ^[0-9]+$ ]] || [[ "$pr_input" =~ ^https://github\.com/[^/]+/[^/]+/pull/[0-9]+$ ]]; then
-            echo "Resolving PR data for PR $pr_input..."
-            if [[ "${{ steps.check-gh-cli.outputs.gh-available }}" == "true" ]]; then
-              # Fetch PR data and update resolved variables to point to PR head
-              pr_data=$(gh pr view "$pr_input" --json headRefName,headRepository,headRepositoryOwner 2>/dev/null || echo "")
-              if [[ -n "$pr_data" ]]; then
-                source_branch=$(echo "$pr_data" | jq -r '.headRefName // empty')
-                source_repo=$(echo "$pr_data" | jq -r '.headRepository.nameWithOwner // empty')
-                source_owner=$(echo "$pr_data" | jq -r '.headRepositoryOwner.login // empty')
-                source_repo_name=$(echo "$pr_data" | jq -r '.headRepository.name // empty')
-                
-                if [[ -n "$source_branch" ]]; then
-                  # Update resolved variables to point to PR head
-                  CI_VARS["resolved-git-ref"]="refs/heads/$source_branch"
-                  CI_VARS["resolved-git-branch"]="$source_branch"
-                  CI_VARS["resolved-repo-name-full"]="$source_repo"
-                  CI_VARS["resolved-repo-owner"]="$source_owner"
-                  CI_VARS["resolved-repo-name"]="$source_repo_name"
-                  CI_VARS["resolved-git-branch-url"]="https://github.com/$source_repo/tree/$source_branch"
+        # Auto-detect workflow_dispatch inputs and update variables accordingly
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "Detecting workflow_dispatch inputs..."
+          
+          # Auto-detect PR input (pr or pr-number)
+          pr_input="${{ github.event.inputs.pr || github.event.inputs.pr-number }}"
+          if [[ -n "$pr_input" ]]; then
+            # Validate PR input to prevent command injection
+            if [[ "$pr_input" =~ ^[0-9]+$ ]] || [[ "$pr_input" =~ ^https://github\.com/[^/]+/[^/]+/pull/[0-9]+$ ]]; then
+              echo "Auto-detected PR input: $pr_input"
+              CI_VARS["pr-number"]="$pr_input"
+              
+              if [[ "${{ steps.check-gh-cli.outputs.gh-available }}" == "true" ]]; then
+                # Fetch PR data and update resolved variables to point to PR head
+                pr_data=$(gh pr view "$pr_input" --json headRefName,headRepository,headRepositoryOwner,number,title 2>/dev/null || echo "")
+                if [[ -n "$pr_data" ]]; then
+                  source_branch=$(echo "$pr_data" | jq -r '.headRefName // empty')
+                  source_repo=$(echo "$pr_data" | jq -r '.headRepository.nameWithOwner // empty')
+                  source_owner=$(echo "$pr_data" | jq -r '.headRepositoryOwner.login // empty')
+                  source_repo_name=$(echo "$pr_data" | jq -r '.headRepository.name // empty')
+                  pr_title=$(echo "$pr_data" | jq -r '.title // empty')
+                  
+                  if [[ -n "$source_branch" ]]; then
+                    # Update resolved variables to point to PR head
+                    CI_VARS["resolved-git-ref"]="refs/heads/$source_branch"
+                    CI_VARS["resolved-git-branch"]="$source_branch"
+                    CI_VARS["resolved-repo-name-full"]="$source_repo"
+                    CI_VARS["resolved-repo-owner"]="$source_owner"
+                    CI_VARS["resolved-repo-name"]="$source_repo_name"
+                    CI_VARS["resolved-git-branch-url"]="https://github.com/$source_repo/tree/$source_branch"
+                    CI_VARS["pr-title"]="$pr_title"
+                    CI_VARS["pr-url"]="https://github.com/${{ github.repository }}/pull/$pr_input"
+                    CI_VARS["is-pr"]="true"
+                  fi
                 fi
               fi
+            else
+              echo "Error: Invalid PR input '$pr_input'. Must be a PR number or valid PR URL." >&2
             fi
-          else
-            echo "Error: Invalid PR input '$pr_input'. Must be a PR number or valid PR URL." >&2
+          fi
+          
+          # Auto-detect comment-id input
+          comment_id_input="${{ github.event.inputs.comment-id }}"
+          if [[ -n "$comment_id_input" ]]; then
+            echo "Auto-detected comment-id input: $comment_id_input"
+            CI_VARS["comment-id"]="$comment_id_input"
+          fi
+          
+          # Auto-detect issue input (issue-id or issue-number)
+          issue_input="${{ github.event.inputs.issue-id || github.event.inputs.issue-number }}"
+          if [[ -n "$issue_input" ]]; then
+            echo "Auto-detected issue input: $issue_input"
+            CI_VARS["issue-number"]="$issue_input"
+            # If we have both issue and comment, construct comment URL
+            if [[ -n "$comment_id_input" && -n "$issue_input" ]]; then
+              CI_VARS["comment-url"]="https://github.com/${{ github.repository }}/issues/$issue_input#issuecomment-$comment_id_input"
+            fi
           fi
         fi
         

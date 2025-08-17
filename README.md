@@ -145,12 +145,46 @@ The action automatically resolves common CI variables from GitHub context, elimi
     echo "All variables: ${{ steps.vars.outputs.custom }}"
 ```
 
+#### Workflow Dispatch Auto-Detection
+
+The action automatically detects and resolves common workflow_dispatch inputs:
+
+- **PR inputs**: `pr` or `pr-number` - Automatically resolves PR context and updates resolved variables to point to PR head
+- **Comment inputs**: `comment-id` - Resolves comment metadata for slash command workflows  
+- **Issue inputs**: `issue-id` or `issue-number` - Resolves issue context and constructs URLs
+
+```yaml
+# Example workflow_dispatch with auto-detected inputs
+on:
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: 'PR number to operate on'
+        required: false
+      comment-id:
+        description: 'Comment ID that triggered this'
+        required: false
+      issue-number:
+        description: 'Issue number'
+        required: false
+
+jobs:
+  example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aaronsteers/resolve-vars-action@v1
+        id: vars
+      # All workflow_dispatch inputs are now available as resolved variables
+      - run: echo "Operating on PR: ${{ steps.vars.outputs.pr-number }}"
+```
+
 **Key Features:**
 - **Smart resolved context**: `resolved-*` variables always point to the effective working context (PR head for PRs, current branch otherwise)
 - **Explicit PR source/target**: Separate `pr-source-*` and `pr-target-*` variables for fine-grained PR workflows
 - **URL generation**: Automatic GitHub URLs for branches, commits, PRs, and comments
 - **Fork-aware**: Properly distinguishes between source and target repositories in fork scenarios
 - **Context detection**: `is-pr` boolean and other metadata for workflow logic
+- **Workflow dispatch auto-detection**: Automatically detects and resolves `pr`/`pr-number`, `comment-id`, and `issue-id`/`issue-number` inputs
 
 ---
 
