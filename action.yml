@@ -245,17 +245,6 @@ runs:
           echo "Warning: GitHub CLI (gh) not available. PR resolution will be limited."
         fi
 
-    # Check GitHub CLI availability
-    - id: check-gh-cli
-      shell: bash
-      run: |
-        if command -v gh >/dev/null 2>&1; then
-          echo "gh-available=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "gh-available=false" >> "$GITHUB_OUTPUT"
-          echo "Warning: GitHub CLI (gh) not available. PR resolution will be limited."
-        fi
-
     # Process standard CI variables
     - id: resolve-standard-ci-vars
       shell: bash
