@@ -24,12 +24,16 @@ inputs:
     required: false
 outputs:
   custom:
+    value: ${{ steps.resolve.outputs.custom }}
     description: 'JSON-encoded object with all resolved custom values'
   var1:
+    value: ${{ steps.resolve.outputs.var1 }}
     description: 'Custom user-defined output variable 1'
   var2:
+    value: ${{ steps.resolve.outputs.var2 }}
     description: 'Custom user-defined output variable 2'
   var3:
+    value: ${{ steps.resolve.outputs.var3 }}
     description: 'Custom user-defined output variable 3'
 runs:
   using: "composite"
