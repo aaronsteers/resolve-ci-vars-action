@@ -42,7 +42,6 @@ runs:
     - id: resolve
       shell: bash
       run: |
-        ALL_VARS=""
         declare -A RESOLVED_VARS
 
         # Process static_inputs
@@ -67,23 +66,29 @@ runs:
               # Store in associative array
               RESOLVED_VARS["$var_name"]="$var_value"
 
-              # Build ALL_VARS in .env format
-              if [[ -n "$ALL_VARS" ]]; then
-                ALL_VARS="$ALL_VARS"$'\n'"$var_name=$var_value"
-              else
-                ALL_VARS="$var_name=$var_value"
-              fi
-
-              # Output each variable
+              # Output each variable as individual output
               echo "$var_name=$var_value" >> "$GITHUB_OUTPUT"
             fi
           done <<< "${{ inputs.static_inputs }}"
         fi
 
-        # Output the "all variables" output in .env format
-        echo "all_vars<<EOF" >> "$GITHUB_OUTPUT"
-        echo "$ALL_VARS" >> "$GITHUB_OUTPUT"
-        echo "EOF" >> "$GITHUB_OUTPUT"
+        # Build JSON object with all resolved variables
+        json_payload="{"
+        first=true
+        for var_name in "${!RESOLVED_VARS[@]}"; do
+          if [[ "$first" == "true" ]]; then
+            first=false
+          else
+            json_payload+=","
+          fi
+          # Escape quotes in the value
+          escaped_value=$(printf '%s\n' "${RESOLVED_VARS[$var_name]}" | sed 's/"/\\"/g')
+          json_payload+="\"$var_name\":\"$escaped_value\""
+        done
+        json_payload+="}"
+
+        # Output the JSON object as 'all_vars'
+        echo "all_vars=$json_payload" >> "$GITHUB_OUTPUT"
 
         # Logging
         SHOULD_LOG="${{ inputs.log_outputs == 'true' || inputs.non_sensitive == 'true' }}"
@@ -92,13 +97,13 @@ runs:
           for var_name in "${!RESOLVED_VARS[@]}"; do
             echo "  $var_name: ${RESOLVED_VARS[$var_name]}"
           done
-          echo "  all_vars: $ALL_VARS"
+          echo "  all_vars (JSON): $json_payload"
 
           {
             echo "### 🔍 Variable Resolution Summary"
             for var_name in "${!RESOLVED_VARS[@]}"; do
               echo "- \`$var_name\`: ${RESOLVED_VARS[$var_name]}"
             done
-            echo "- \`all_vars\`: $ALL_VARS"
+            echo "- \`all_vars\`: $json_payload"
           } >> "$GITHUB_STEP_SUMMARY"
         fi
