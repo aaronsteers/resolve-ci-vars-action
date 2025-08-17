@@ -25,16 +25,16 @@ inputs:
     required: false
 outputs:
   all:
-    value: ${{ steps.resolve.outputs.all_vars }}
+    value: ${{ steps.merge-results.outputs.all_vars }}
     description: 'JSON-encoded object with all resolved values'
   var1:
-    value: ${{ steps.resolve.outputs.var1 }}
+    value: ${{ steps.merge-results.outputs.var1 }}
     description: 'Custom user-defined output variable 1'
   var2:
-    value: ${{ steps.resolve.outputs.var2 }}
+    value: ${{ steps.merge-results.outputs.var2 }}
     description: 'Custom user-defined output variable 2'
   var3:
-    value: ${{ steps.resolve.outputs.var3 }}
+    value: ${{ steps.merge-results.outputs.var3 }}
     description: 'Custom user-defined output variable 3'
 runs:
   using: "composite"
