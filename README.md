@@ -88,13 +88,13 @@ When `standard_ci_vars` is enabled (default: `true`), the action automatically r
 | Variable | Description | Resolves From | Example Value |
 |----------|-------------|---------------|---------------|
 | **Repository & Git Context** |
-| `target-repository` | Target repository (base repo in owner/name format) | `github.repository` or `github.event.pull_request.base.repo.full_name` | `airbytehq/airbyte` |
-| `repository-owner` | Repository owner/organization | `github.repository_owner` | `airbytehq` |
+| `target-repo` | Target repository (base repo in owner/name format) | `github.repository` or `github.event.pull_request.base.repo.full_name` | `airbytehq/airbyte` |
+| `repo-owner` | Repository owner/organization | `github.repository_owner` | `airbytehq` |
 | `repo-name` | Repository name only | `github.event.repository.name` or extracted from repository | `airbyte` |
-| `repo-name-full` | Full repository name (owner/name) | Same as `target-repository` | `airbytehq/airbyte` |
+| `repo-name-full` | Full repository name (owner/name) | Same as `target-repo` | `airbytehq/airbyte` |
 | `source-branch` | Source branch being merged (null for issues) | `github.head_ref` or `github.ref_name` | `feature/new-connector` |
 | `target-branch` | Target branch for merge (null for issues) | `github.base_ref` or default branch | `main` |
-| `source-repository` | Source repository (important for forks, null for issues) | `github.event.pull_request.head.repo.full_name` | `contributor/airbyte` |
+| `source-repo` | Source repository (important for forks, null for issues) | `github.event.pull_request.head.repo.full_name` | `contributor/airbyte` |
 | `source-sha` | Source commit SHA (null for issues) | `github.event.pull_request.head.sha` | `abc123...` |
 | `target-sha` | Target commit SHA (null for issues) | `github.event.pull_request.base.sha` | `def456...` |
 | `restricted-security-mode` | Whether running in restricted security mode | `true` when from fork/dependabot and trigger is `pull_request` | `true` |
@@ -134,7 +134,7 @@ When `standard_ci_vars` is enabled (default: `true`), the action automatically r
   run: |
     echo "PR Number: ${{ steps.vars.outputs.pr-number }}"
     echo "Source Branch: ${{ steps.vars.outputs.source-branch }}"
-    echo "Repository: ${{ steps.vars.outputs.target-repository }}"
+    echo "Repository: ${{ steps.vars.outputs.target-repo }}"
     echo "All variables: ${{ steps.vars.outputs.all }}"
 ```
 
