@@ -2,6 +2,11 @@ name: CI Test Action
 on:
   pull_request:
   workflow_dispatch:
+    inputs:
+      pr:
+        description: 'PR number to test explicit PR input'
+        required: false
+        default: ''
 
 jobs:
   test-resolve-vars:
@@ -16,6 +21,7 @@ jobs:
         uses: ./
         with:
           log_outputs: true
+          pr: ${{ github.event.inputs.pr }}
           static_inputs: |
             username=testuser
             environment=development
