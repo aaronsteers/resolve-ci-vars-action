@@ -25,16 +25,16 @@ inputs:
     required: false
 outputs:
   all:
-    value: ${{ steps.resolve.outputs.all_vars }}
+    value: ${{ steps.merge-results.outputs.all_vars }}
     description: 'JSON-encoded object with all resolved values'
   var1:
-    value: ${{ steps.resolve.outputs.var1 }}
+    value: ${{ steps.merge-results.outputs.var1 }}
     description: 'Custom user-defined output variable 1'
   var2:
-    value: ${{ steps.resolve.outputs.var2 }}
+    value: ${{ steps.merge-results.outputs.var2 }}
     description: 'Custom user-defined output variable 2'
   var3:
-    value: ${{ steps.resolve.outputs.var3 }}
+    value: ${{ steps.merge-results.outputs.var3 }}
     description: 'Custom user-defined output variable 3'
 runs:
   using: "composite"
@@ -72,7 +72,164 @@ runs:
           done <<< "${{ inputs.static_inputs }}"
         fi
 
-        # Build JSON object with all resolved variables
+        # Process jinja_inputs if provided
+        if [[ -n "${{ inputs.jinja_inputs }}" ]]; then
+          echo "Processing Jinja inputs..."
+
+          # Create temporary files in the workspace (accessible to Docker containers)
+          temp_vars_file="$GITHUB_WORKSPACE/.temp_vars.json"
+          temp_jinja_template="$GITHUB_WORKSPACE/.temp_template.j2"
+          temp_jinja_output="$GITHUB_WORKSPACE/.temp_output.txt"
+
+          # Write current resolved variables to JSON file
+          echo "{" > "$temp_vars_file"
+          first=true
+          for var_name in "${!RESOLVED_VARS[@]}"; do
+            if [[ "$first" == "true" ]]; then
+              first=false
+            else
+              echo "," >> "$temp_vars_file"
+            fi
+            # Escape quotes in the value for JSON
+            escaped_value=$(printf '%s\n' "${RESOLVED_VARS[$var_name]}" | sed 's/"/\\"/g')
+            echo -n "  \"$var_name\": \"$escaped_value\"" >> "$temp_vars_file"
+          done
+          echo "" >> "$temp_vars_file"
+          echo "}" >> "$temp_vars_file"
+
+          # Save jinja_inputs and temp files to environment for next step
+          # Set environment variables for the jinja renderer
+          echo "TEMP_VARS_FILE=$temp_vars_file" >> "$GITHUB_ENV"
+          echo "TEMP_JINJA_TEMPLATE=$temp_jinja_template" >> "$GITHUB_ENV"
+          echo "TEMP_JINJA_OUTPUT=$temp_jinja_output" >> "$GITHUB_ENV"
+        fi
+
+        # Create initial JSON with static variables
+        json_payload="{"
+        first=true
+        for var_name in "${!RESOLVED_VARS[@]}"; do
+          if [[ "$first" == "true" ]]; then
+            first=false
+          else
+            json_payload+=","
+          fi
+          # Escape quotes in the value
+          escaped_value=$(printf '%s\n' "${RESOLVED_VARS[$var_name]}" | sed 's/"/\\"/g')
+          json_payload+="\"$var_name\":\"$escaped_value\""
+        done
+        json_payload+="}"
+
+        # Save initial JSON for potential jinja processing
+        echo "INITIAL_JSON=$json_payload" >> "$GITHUB_ENV"
+
+    # Process Jinja inputs using external action if jinja_inputs provided
+    - id: process-jinja
+      if: ${{ inputs.jinja_inputs != '' }}
+      shell: bash
+      run: |
+        # Create Jinja template to process jinja_inputs
+        > "$TEMP_JINJA_TEMPLATE"  # Clear the file first
+
+        echo "=== Jinja inputs data ==="
+        echo '${{ inputs.jinja_inputs }}'
+        echo "=== Jinja inputs data ==="
+
+        while IFS= read -r line; do
+          # Debug: Show what line we're processing
+          echo "DEBUG: Processing line: '$line'"
+
+          # Skip empty lines and comments
+          [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+
+          # Split on first = character
+          if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+            var_name="${BASH_REMATCH[1]}"
+            expression="${BASH_REMATCH[2]}"
+
+            # Trim whitespace from variable name
+            var_name=$(echo "$var_name" | xargs)
+
+            # Append to template file - each line will be VAR_NAME={{ expression }}
+            NEW_JINJA_LINE="${var_name}={{ ${expression} }}"
+            # Debug: Show what we're about to write
+            echo "DEBUG: Adding to template: ${NEW_JINJA_LINE}"
+
+            echo "$NEW_JINJA_LINE" >> "$TEMP_JINJA_TEMPLATE"
+          fi
+        done <<< "${{ format('{0}{1}', inputs.jinja_inputs, '\n')  }}"
+        # End file with newline
+        echo "" >> "$TEMP_JINJA_TEMPLATE"
+
+        # Debug: Print the template file contents
+        echo "=== Generated Jinja template ==="
+        cat "$TEMP_JINJA_TEMPLATE"
+        echo "=== End template ==="
+
+        # Create variables file with current context + jinja_inputs
+        cat > "$TEMP_VARS_FILE" << VARS_EOF
+        {
+          "jinja_inputs": $(echo "$JINJA_INPUTS_DATA" | jq -Rs .)
+        }
+        VARS_EOF
+
+        # Add existing resolved variables to the context
+        if [[ -f "$TEMP_VARS_FILE" ]]; then
+          # Merge with initial resolved vars if any exist
+          echo "Using variables file: $TEMP_VARS_FILE"
+        fi
+
+    - id: render-jinja
+      if: ${{ inputs.jinja_inputs != '' }}
+      uses: lexty/jinja2-renderer@v1
+      with:
+        template_path: ${{ env.TEMP_JINJA_TEMPLATE }}
+        output_path: ${{ env.TEMP_JINJA_OUTPUT }}
+        variables_file: ${{ env.TEMP_VARS_FILE }}
+        environment_variables: 'false'
+        strict: 'false'
+
+    - id: merge-results
+      shell: bash
+      run: |
+        declare -A RESOLVED_VARS
+
+        # Re-load static variables
+        if [[ -n "${{ inputs.static_inputs }}" ]]; then
+          while IFS= read -r line; do
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+              var_name="${BASH_REMATCH[1]}"
+              var_value="${BASH_REMATCH[2]}"
+              var_name=$(echo "$var_name" | xargs)
+              RESOLVED_VARS["$var_name"]="$var_value"
+            fi
+          done <<< "${{ inputs.static_inputs }}"
+        fi
+
+        # Process jinja results if they exist
+        if [[ -f "$TEMP_JINJA_OUTPUT" ]]; then
+          echo "=== Jinja output file contents ==="
+          cat "$TEMP_JINJA_OUTPUT"
+          echo "=== End Jinja output ==="
+
+          echo "Processing Jinja results..."
+          while IFS= read -r line; do
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+              var_name="${BASH_REMATCH[1]}"
+              var_value="${BASH_REMATCH[2]}"
+              var_name=$(echo "$var_name" | xargs)
+              echo "Found resolved Jinja variable: $var_name = $var_value"
+              RESOLVED_VARS["$var_name"]="$var_value"
+              echo "$var_name=$var_value" >> "$GITHUB_OUTPUT"
+            fi
+          done < "$TEMP_JINJA_OUTPUT"
+
+          # Clean up temp files
+          rm -f "$TEMP_VARS_FILE" "$TEMP_JINJA_TEMPLATE" "$TEMP_JINJA_OUTPUT"
+        fi
+
+        # Build final JSON object with all resolved variables
         json_payload="{"
         first=true
         for var_name in "${!RESOLVED_VARS[@]}"; do
