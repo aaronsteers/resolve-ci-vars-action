@@ -157,8 +157,16 @@ runs:
           CI_VARS["base-repo"]="${{ github.repository }}"
           CI_VARS["head-sha"]="${{ github.sha }}"
           CI_VARS["base-sha"]=""  # Will be empty for workflow_dispatch
+        elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          # For workflow_dispatch without pr input, set both head-ref and base-ref to current branch
+          CI_VARS["head-ref"]="${{ github.ref_name }}"
+          CI_VARS["base-ref"]="${{ github.ref_name }}"
+          CI_VARS["head-repo"]="${{ github.repository }}"
+          CI_VARS["base-repo"]="${{ github.repository }}"
+          CI_VARS["head-sha"]="${{ github.sha }}"
+          CI_VARS["base-sha"]="${{ github.sha }}"
         else
-          # For issue events and workflow_dispatch without pr input, null out git refs
+          # For issue events, null out git refs since issues don't have branches
           CI_VARS["head-ref"]=""
           CI_VARS["base-ref"]=""
           CI_VARS["head-repo"]=""
@@ -171,12 +179,8 @@ runs:
         if [[ "${{ github.event_name }}" == "issues" || "${{ github.event_name }}" == "issue_comment" ]]; then
           # For issue events, null out gitref since issues don't have branches
           CI_VARS["gitref"]=""
-        elif [[ "${{ github.event_name }}" == "workflow_dispatch" && -z "${{ inputs.pr }}" ]]; then
-          # For workflow_dispatch without pr input, we can't tell if it's from issue or PR
-          # so null out gitref to be safe
-          CI_VARS["gitref"]=""
         elif [[ -n "${{ inputs.pr }}" ]]; then
-          # When pr input exists, we need to fetch the actual PR head ref
+          # When pr input exists, we need to fetch the actual PR head ref (fork's branch)
           # This handles slash commands that run from main but operate on PR branch
           echo "Resolving gitref for PR ${{ inputs.pr }}..."
           if command -v gh >/dev/null 2>&1; then
@@ -190,10 +194,10 @@ runs:
             CI_VARS["gitref"]="${{ github.head_ref || github.ref_name }}"
           fi
         elif [[ -n "${{ github.head_ref }}" ]]; then
-          # For direct PR events
+          # For direct PR events - use head ref (fork's branch)
           CI_VARS["gitref"]="${{ github.head_ref }}"
         else
-          # Fallback to current ref
+          # Fallback to current ref (for workflow_dispatch without pr input)
           CI_VARS["gitref"]="${{ github.ref_name }}"
         fi
         
