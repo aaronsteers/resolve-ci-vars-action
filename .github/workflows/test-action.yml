@@ -106,7 +106,6 @@ jobs:
         id: test-ci-vars
         uses: ./
         with:
-          standard_ci_vars: true
           log_outputs: true
           static_inputs: |
             custom_var=test_value
@@ -115,9 +114,13 @@ jobs:
         run: |
           echo "=== DEBUG: Standard CI Variables ==="
           echo "All variables: ${{ steps.test-ci-vars.outputs.all }}"
-          echo "Repository: ${{ steps.test-ci-vars.outputs.repo }}"
+          echo "Target repo: ${{ steps.test-ci-vars.outputs.repo }}"
           echo "Trigger type: ${{ steps.test-ci-vars.outputs.trigger-type }}"
           echo "Actor: ${{ steps.test-ci-vars.outputs.actor }}"
+          echo "Repo owner: ${{ steps.test-ci-vars.outputs.repo-owner }}"
+          echo "Repository name: ${{ steps.test-ci-vars.outputs.repo-name }}"
+          echo "Repository name full: ${{ steps.test-ci-vars.outputs.repo-name-full }}"
+          echo "Restricted security mode: ${{ steps.test-ci-vars.outputs.restricted-security-mode }}"
           echo "=================================="
 
       - name: Verify standard CI variables
@@ -138,10 +141,58 @@ jobs:
             exit 1
           fi
 
+          if [ -z "${{ steps.test-ci-vars.outputs.repo-owner }}" ]; then
+            echo "ERROR: repo-owner variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.repo-name }}" ]; then
+            echo "ERROR: repo-name variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.repo-name-full }}" ]; then
+            echo "ERROR: repo-name-full variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.restricted-security-mode }}" ]; then
+            echo "ERROR: restricted-security-mode variable should be populated"
+            exit 1
+          fi
+
           # Verify repo matches expected format
           if [ "${{ steps.test-ci-vars.outputs.repo }}" != "aaronsteers/resolve-vars-action" ]; then
             echo "ERROR: repo should be aaronsteers/resolve-vars-action"
             echo "Actual: ${{ steps.test-ci-vars.outputs.repo }}"
+            exit 1
+          fi
+
+          # Verify repo-owner matches expected value
+          if [ "${{ steps.test-ci-vars.outputs.repo-owner }}" != "aaronsteers" ]; then
+            echo "ERROR: repo-owner should be aaronsteers"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.repo-owner }}"
+            exit 1
+          fi
+
+          # Verify repo-name matches expected value
+          if [ "${{ steps.test-ci-vars.outputs.repo-name }}" != "resolve-vars-action" ]; then
+            echo "ERROR: repo-name should be resolve-vars-action"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.repo-name }}"
+            exit 1
+          fi
+
+          # Verify repo-name-full matches expected value
+          if [ "${{ steps.test-ci-vars.outputs.repo-name-full }}" != "aaronsteers/resolve-vars-action" ]; then
+            echo "ERROR: repo-name-full should be aaronsteers/resolve-vars-action"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.repo-name-full }}"
+            exit 1
+          fi
+
+          # Verify restricted-security-mode is false for non-fork PRs
+          if [ "${{ steps.test-ci-vars.outputs.restricted-security-mode }}" != "false" ]; then
+            echo "ERROR: restricted-security-mode should be false for non-fork PRs"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.restricted-security-mode }}"
             exit 1
           fi
 
