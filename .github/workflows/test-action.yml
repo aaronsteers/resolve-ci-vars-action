@@ -29,6 +29,7 @@ jobs:
             is_prod=False
             computed_name='${{ 'testuser' }}' + '_' + '${{ 'development' }}'
             port_number=8080 if 'true' == 'false' else 443
+            answer=42
 
       - name: Print outputs
         run: |
@@ -75,6 +76,13 @@ jobs:
             echo "ERROR: port_number output doesn't match expected value"
             echo "Expected: 443"
             echo "Actual: ${{ fromJSON(steps.test-vars.outputs.all).port_number }}"
+            exit 1
+          fi
+
+          if [ "${{ fromJSON(steps.test-vars.outputs.all).answer }}" != "42" ]; then
+            echo "ERROR: answer output doesn't match expected value"
+            echo "Expected: 42"
+            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.all).answer }}"
             exit 1
           fi
 
