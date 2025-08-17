@@ -18,9 +18,11 @@ jobs:
           static_inputs: |
             username=testuser
             environment=development
-          # jinja_inputs: |
-          #   greeting='Hello, ' + 'World!'
-          #   is_prod=False
+          jinja_inputs: |
+            greeting='Hello, ' + 'World!'
+            is_prod=False
+            computed_name=username + '_' + environment
+            port_number=8080 if 'true' == 'false' else 443
           log_outputs: true
 
       - name: Verify outputs
@@ -37,20 +39,40 @@ jobs:
           fi
 
           # Check jinja variables
-          # if [ "${{ fromJson(steps.test-vars.outputs.all).greeting }}" != "Hello, World!" ]; then
-          #   echo "ERROR: greeting output doesn't match expected value"
-          #   exit 1
-          # fi
+          if [ "${{ fromJSON(steps.test-vars.outputs.all).greeting }}" != "Hello, World!" ]; then
+            echo "ERROR: greeting output doesn't match expected value"
+            echo "Expected: Hello, World!"
+            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.all).greeting }}"
+            exit 1
+          fi
 
-          # if [ "${{ fromJSON(steps.test-vars.outputs.all).is_prod }}" != "False" ]; then
-          #   echo "ERROR: is_prod output doesn't match expected value"
-          #   exit 1
-          # fi
+          if [ "${{ fromJSON(steps.test-vars.outputs.all).is_prod }}" != "False" ]; then
+            echo "ERROR: is_prod output doesn't match expected value"
+            echo "Expected: False"
+            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.all).is_prod }}"
+            exit 1
+          fi
+
+          if [ "${{ fromJSON(steps.test-vars.outputs.all).computed_name }}" != "testuser_development" ]; then
+            echo "ERROR: computed_name output doesn't match expected value"
+            echo "Expected: testuser_development"
+            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.all).computed_name }}"
+            exit 1
+          fi
+
+          if [ "${{ fromJSON(steps.test-vars.outputs.all).port_number }}" != "443" ]; then
+            echo "ERROR: port_number output doesn't match expected value"
+            echo "Expected: 443"
+            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.all).port_number }}"
+            exit 1
+          fi
 
           echo "✅ All tests passed!"
           echo "Static outputs:"
           echo "  username: ${{ fromJSON(steps.test-vars.outputs.all).username }}"
           echo "  environment: ${{ fromJSON(steps.test-vars.outputs.all).environment }}"
-          # echo "Jinja outputs:"
-          # echo "  greeting: ${{ fromJSON(steps.test-vars.outputs.all).greeting }}"
-          # echo "  is_prod: ${{ fromJSON(steps.test-vars.outputs.all).is_prod }}"
+          echo "Jinja outputs:"
+          echo "  greeting: ${{ fromJSON(steps.test-vars.outputs.all).greeting }}"
+          echo "  is_prod: ${{ fromJSON(steps.test-vars.outputs.all).is_prod }}"
+          echo "  computed_name: ${{ fromJSON(steps.test-vars.outputs.all).computed_name }}"
+          echo "  port_number: ${{ fromJSON(steps.test-vars.outputs.all).port_number }}"
