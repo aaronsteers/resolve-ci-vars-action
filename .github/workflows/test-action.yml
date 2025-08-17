@@ -155,8 +155,8 @@ jobs:
           fi
 
           # Verify resolved-repo-name-full matches expected format
-          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}" != "aaronsteers/resolve-vars-action" ]; then
-            echo "ERROR: resolved-repo-name-full should be aaronsteers/resolve-vars-action"
+          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}" != "aaronsteers/resolve-ci-vars-action" ]; then
+            echo "ERROR: resolved-repo-name-full should be aaronsteers/resolve-ci-vars-action"
             echo "Actual: ${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}"
             exit 1
           fi
@@ -169,8 +169,8 @@ jobs:
           fi
 
           # Verify resolved-repo-name matches expected value
-          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-name }}" != "resolve-vars-action" ]; then
-            echo "ERROR: resolved-repo-name should be resolve-vars-action"
+          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-name }}" != "resolve-ci-vars-action" ]; then
+            echo "ERROR: resolved-repo-name should be resolve-ci-vars-action"
             echo "Actual: ${{ steps.test-ci-vars.outputs.resolved-repo-name }}"
             exit 1
           fi
