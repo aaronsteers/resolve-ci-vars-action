@@ -204,7 +204,7 @@ jobs:
 
           echo "✅ Standard CI variables test passed!"
 
-      - name: Test standard CI vars disabled (backward compatibility)
+      - name: Test with standard CI vars disabled
         id: test-no-ci-vars
         uses: ./
         with:
@@ -212,7 +212,7 @@ jobs:
           static_inputs: |
             test_var=backward_compat
 
-      - name: Verify backward compatibility
+      - name: Verify standard CI vars disabled
         run: |
           # Ensure CI variables are NOT populated when disabled
           if [ -n "${{ steps.test-no-ci-vars.outputs.repo }}" ]; then
@@ -226,4 +226,4 @@ jobs:
             exit 1
           fi
 
-          echo "✅ Backward compatibility test passed!"
+          echo "✅ Standard CI vars disabled test passed!"
