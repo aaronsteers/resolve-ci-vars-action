@@ -132,7 +132,7 @@ The action automatically resolves common CI variables from GitHub context, elimi
 ```yaml
 - name: Resolve CI variables
   id: vars
-  uses: aaronsteers/resolve-vars-action@v1
+  uses: aaronsteers/resolve-ci-vars-action@v1
   with:
     static_inputs: |
       custom_var=my_value
@@ -172,7 +172,7 @@ jobs:
   example:
     runs-on: ubuntu-latest
     steps:
-      - uses: aaronsteers/resolve-vars-action@v1
+      - uses: aaronsteers/resolve-ci-vars-action@v1
         id: vars
       # All workflow_dispatch inputs are now available as resolved variables
       - run: echo "Operating on PR: ${{ steps.vars.outputs.pr-number }}"
@@ -207,7 +207,7 @@ jobs:
     steps:
       - name: Resolve variables
         id: vars
-        uses: your-org/resolve-vars-action@v1
+        uses: your-org/resolve-ci-vars-action@v1
         with:
           static_inputs: |
             username=${{ inputs.username }}
