@@ -16,15 +16,19 @@ jobs:
         id: test-vars
         uses: ./
         with:
+          log_outputs: true
           static_inputs: |
             username=testuser
             environment=development
+
+          # Jinja2 inputs to evaluate:
+          # These are intentionally nonsensical, but they demonstrate the syntax
+          # and they test the tool's ability to evaluate dynamic jinja2 expressions.
           jinja_inputs: |
             greeting='Hello, ' + 'World!'
             is_prod=False
-            computed_name=username + '_' + environment
+            computed_name='${{ 'testuser' }}' + '_' + '${{ 'development' }}'
             port_number=8080 if 'true' == 'false' else 443
-          log_outputs: true
 
       - name: Verify outputs
         run: |
