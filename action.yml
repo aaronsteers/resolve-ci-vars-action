@@ -129,17 +129,29 @@ runs:
       shell: bash
       run: |
         # Create Jinja template to process jinja_inputs
-        cat > "$TEMP_JINJA_TEMPLATE" << 'TEMPLATE_EOF'
-        {%- for line in jinja_inputs.strip().split('\n') -%}
-        {%- set line = line.strip() -%}
-        {%- if line and not line.startswith('#') and '=' in line -%}
-        {%- set parts = line.split('=', 1) -%}
-        {%- set var_name = parts[0].strip() -%}
-        {%- set expression = parts[1].strip() -%}
-        {{ var_name }}={{ eval(expression) }}{{ '\n' }}
-        {%- endif -%}
-        {%- endfor -%}
-        TEMPLATE_EOF
+        > "$TEMP_JINJA_TEMPLATE"  # Clear the file first
+
+        while IFS= read -r line; do
+          # Skip empty lines and comments
+          [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+
+          # Split on first = character
+          if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
+            var_name="${BASH_REMATCH[1]}"
+            expression="${BASH_REMATCH[2]}"
+
+            # Trim whitespace from variable name
+            var_name=$(echo "$var_name" | xargs)
+
+            # Append to template file - each line will be VAR_NAME={{ expression }}
+            echo "${var_name}={{ ${expression} }}" >> "$TEMP_JINJA_TEMPLATE"
+          fi
+        done <<< "$JINJA_INPUTS_DATA"
+
+        # Debug: Print the template file contents
+        echo "=== Generated Jinja template ==="
+        cat "$TEMP_JINJA_TEMPLATE"
+        echo "=== End template ==="
 
         # Create variables file with current context + jinja_inputs
         cat > "$TEMP_VARS_FILE" << VARS_EOF
