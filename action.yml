@@ -26,14 +26,103 @@ inputs:
   standard_ci_vars:
     description: >
       Whether to automatically resolve standard CI variables from GitHub context.
-      When enabled, variables like pr-number, head-ref, base-ref, etc. are automatically
+      When enabled, variables like pr-number, source-branch, target-branch, etc. are automatically
       populated based on the trigger type.
-    default: 'false'
+    default: 'true'
     required: false
 outputs:
   all:
     value: ${{ steps.merge-results.outputs.all_vars }}
     description: 'JSON-encoded object with all resolved values'
+  # Repository Context
+  repo:
+    value: ${{ steps.merge-results.outputs.repo }}
+    description: 'Target repository (base repo in owner/name format)'
+  target-repo:
+    value: ${{ steps.merge-results.outputs.target-repo }}
+    description: 'Target repository (base repo in owner/name format)'
+  repo-owner:
+    value: ${{ steps.merge-results.outputs.repo-owner }}
+    description: 'Repository owner/organization'
+  repo-name:
+    value: ${{ steps.merge-results.outputs.repo-name }}
+    description: 'Repository name only'
+  repo-name-full:
+    value: ${{ steps.merge-results.outputs.repo-name-full }}
+    description: 'Full repository name (owner/name)'
+  # Branch Context
+  source-branch:
+    value: ${{ steps.merge-results.outputs.source-branch }}
+    description: 'Source branch being merged (null for issues)'
+  target-branch:
+    value: ${{ steps.merge-results.outputs.target-branch }}
+    description: 'Target branch for merge (null for issues)'
+  source-repo:
+    value: ${{ steps.merge-results.outputs.source-repo }}
+    description: 'Source repository (important for forks, null for issues)'
+  # SHA Context
+  source-sha:
+    value: ${{ steps.merge-results.outputs.source-sha }}
+    description: 'Source commit SHA (null for issues)'
+  target-sha:
+    value: ${{ steps.merge-results.outputs.target-sha }}
+    description: 'Target commit SHA (null for issues)'
+  restricted-security-mode:
+    value: ${{ steps.merge-results.outputs.restricted-security-mode }}
+    description: 'Whether running in restricted security mode (fork/dependabot pull_request)'
+  # Pull Request Context
+  pr-number:
+    value: ${{ steps.merge-results.outputs.pr-number }}
+    description: 'Pull request number'
+  pr-title:
+    value: ${{ steps.merge-results.outputs.pr-title }}
+    description: 'Pull request title'
+  pr-author:
+    value: ${{ steps.merge-results.outputs.pr-author }}
+    description: 'Pull request author username'
+  pr-draft:
+    value: ${{ steps.merge-results.outputs.pr-draft }}
+    description: 'Whether PR is draft'
+  pr-from-fork:
+    value: ${{ steps.merge-results.outputs.pr-from-fork }}
+    description: 'Whether PR is from a fork'
+  # Issue Context
+  issue-number:
+    value: ${{ steps.merge-results.outputs.issue-number }}
+    description: 'Issue number (equals pr-number for PRs)'
+  issue-title:
+    value: ${{ steps.merge-results.outputs.issue-title }}
+    description: 'Issue title'
+  issue-author:
+    value: ${{ steps.merge-results.outputs.issue-author }}
+    description: 'Issue author username'
+  issue-type:
+    value: ${{ steps.merge-results.outputs.issue-type }}
+    description: 'Type of issue context (pull_request or issue)'
+  # Comment Context
+  comment-id:
+    value: ${{ steps.merge-results.outputs.comment-id }}
+    description: 'Comment ID that triggered workflow'
+  comment-author:
+    value: ${{ steps.merge-results.outputs.comment-author }}
+    description: 'Comment author username'
+  comment-body:
+    value: ${{ steps.merge-results.outputs.comment-body }}
+    description: 'Comment body text'
+  # Workflow Context
+  trigger-type:
+    value: ${{ steps.merge-results.outputs.trigger-type }}
+    description: 'Event that triggered workflow'
+  actor:
+    value: ${{ steps.merge-results.outputs.actor }}
+    description: 'User who triggered the workflow'
+  run-id:
+    value: ${{ steps.merge-results.outputs.run-id }}
+    description: 'Workflow run ID'
+  run-number:
+    value: ${{ steps.merge-results.outputs.run-number }}
+    description: 'Workflow run number'
+  # Legacy outputs
   var1:
     value: ${{ steps.merge-results.outputs.var1 }}
     description: 'Custom user-defined output variable 1'
@@ -138,74 +227,71 @@ runs:
         
         # Repository & Git Context
         CI_VARS["repo"]="${{ github.event.pull_request.base.repo.full_name || github.repository }}"
+        CI_VARS["target-repo"]="${{ github.event.pull_request.base.repo.full_name || github.repository }}"
         CI_VARS["repo-owner"]="${{ github.repository_owner }}"
-        CI_VARS["repo-name"]="${{ github.event.repository.name || github.repository }}"
+        repo_name="${{ github.event.repository.name }}"
+        if [[ -z "$repo_name" ]]; then
+          repo_name="${{ github.repository }}"
+          repo_name="${repo_name##*/}"
+        fi
+        CI_VARS["repo-name"]="$repo_name"
+        CI_VARS["repo-name-full"]="${{ github.event.pull_request.base.repo.full_name || github.repository }}"
         
         # Git refs - only populate for PR events, null for issue events and workflow_dispatch without pr input
         if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_target" ]]; then
-          CI_VARS["head-ref"]="${{ github.head_ref || github.ref_name }}"
-          CI_VARS["base-ref"]="${{ github.base_ref || github.event.repository.default_branch || 'main' }}"
-          CI_VARS["head-repo"]="${{ github.event.pull_request.head.repo.full_name || github.repository }}"
-          CI_VARS["base-repo"]="${{ github.event.pull_request.base.repo.full_name || github.repository }}"
-          CI_VARS["head-sha"]="${{ github.event.pull_request.head.sha || github.sha }}"
-          CI_VARS["base-sha"]="${{ github.event.pull_request.base.sha }}"
+          CI_VARS["source-branch"]="${{ github.head_ref || github.ref_name }}"
+          CI_VARS["target-branch"]="${{ github.base_ref || github.event.repository.default_branch || 'main' }}"
+          CI_VARS["source-repo"]="${{ github.event.pull_request.head.repo.full_name || github.repository }}"
+          CI_VARS["source-sha"]="${{ github.event.pull_request.head.sha || github.sha }}"
+          CI_VARS["target-sha"]="${{ github.event.pull_request.base.sha }}"
         elif [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.pr }}" ]]; then
           # For workflow_dispatch with pr input, we can populate some refs but need to fetch PR data
-          CI_VARS["head-ref"]="${{ github.ref_name }}"  # This will be updated by gitref resolution
-          CI_VARS["base-ref"]="${{ github.event.repository.default_branch || 'main' }}"
-          CI_VARS["head-repo"]="${{ github.repository }}"
-          CI_VARS["base-repo"]="${{ github.repository }}"
-          CI_VARS["head-sha"]="${{ github.sha }}"
-          CI_VARS["base-sha"]=""  # Will be empty for workflow_dispatch
+          CI_VARS["source-branch"]="${{ github.ref_name }}"
+          CI_VARS["target-branch"]="${{ github.event.repository.default_branch || 'main' }}"
+          CI_VARS["source-repo"]="${{ github.repository }}"
+          CI_VARS["source-sha"]="${{ github.sha }}"
+          CI_VARS["target-sha"]=""
         elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          # For workflow_dispatch without pr input, set both head-ref and base-ref to current branch
-          CI_VARS["head-ref"]="${{ github.ref_name }}"
-          CI_VARS["base-ref"]="${{ github.ref_name }}"
-          CI_VARS["head-repo"]="${{ github.repository }}"
-          CI_VARS["base-repo"]="${{ github.repository }}"
-          CI_VARS["head-sha"]="${{ github.sha }}"
-          CI_VARS["base-sha"]="${{ github.sha }}"
+          # For workflow_dispatch without pr input, set both source-branch and target-branch to current branch
+          CI_VARS["source-branch"]="${{ github.ref_name }}"
+          CI_VARS["target-branch"]="${{ github.ref_name }}"
+          CI_VARS["source-repo"]="${{ github.repository }}"
+          CI_VARS["source-sha"]="${{ github.sha }}"
+          CI_VARS["target-sha"]="${{ github.sha }}"
         else
           # For issue events, null out git refs since issues don't have branches
-          CI_VARS["head-ref"]=""
-          CI_VARS["base-ref"]=""
-          CI_VARS["head-repo"]=""
-          CI_VARS["base-repo"]=""
-          CI_VARS["head-sha"]=""
-          CI_VARS["base-sha"]=""
+          CI_VARS["source-branch"]=""
+          CI_VARS["target-branch"]=""
+          CI_VARS["source-repo"]=""
+          CI_VARS["source-sha"]=""
+          CI_VARS["target-sha"]=""
         fi
         
-        # Smart gitref resolution - ensures compatibility with repo variable
-        if [[ "${{ github.event_name }}" == "issues" || "${{ github.event_name }}" == "issue_comment" ]]; then
-          # For issue events, null out gitref since issues don't have branches
-          CI_VARS["gitref"]=""
-        elif [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_target" ]]; then
-          # For PR events, gitref should be the head ref (fork's branch name only, not repo/branch)
-          # This ensures gitref is just the branch name that exists on head-repo
-          CI_VARS["gitref"]="${{ github.head_ref }}"
-        elif [[ -n "${{ inputs.pr }}" ]]; then
-          # When pr input exists (slash commands), fetch the PR head ref
-          # This handles slash commands that run from main but operate on PR branch
-          echo "Resolving gitref for PR ${{ inputs.pr }}..."
-          if command -v gh >/dev/null 2>&1; then
-            gitref=$(gh pr view "${{ inputs.pr }}" --json headRefName --jq '.headRefName' 2>/dev/null || echo "")
-            if [[ -n "$gitref" ]]; then
-              CI_VARS["gitref"]="$gitref"
-              # Also update head-repo to match the PR's head repo for consistency
-              head_repo=$(gh pr view "${{ inputs.pr }}" --json headRepository --jq '.headRepository.nameWithOwner' 2>/dev/null || echo "")
-              if [[ -n "$head_repo" ]]; then
-                CI_VARS["head-repo"]="$head_repo"
+        # Smart source-branch resolution for workflow_dispatch with PR input
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.pr }}" ]]; then
+          # Validate PR input to prevent command injection
+          pr_input="${{ inputs.pr }}"
+          if [[ "$pr_input" =~ ^[0-9]+$ ]]; then
+            echo "Resolving source-branch for PR $pr_input..."
+            if command -v gh >/dev/null 2>&1; then
+              source_branch=$(gh pr view "$pr_input" --json headRefName --jq '.headRefName' 2>/dev/null || echo "")
+              if [[ -n "$source_branch" ]]; then
+                CI_VARS["source-branch"]="$source_branch"
+                # Also update source-repository to match the PR's head repo for consistency
+                source_repo=$(gh pr view "$pr_input" --json headRepository --jq '.headRepository.nameWithOwner' 2>/dev/null || echo "")
+                if [[ -n "$source_repo" ]]; then
+                  CI_VARS["source-repo"]="$source_repo"
+                fi
+              else
+                CI_VARS["source-branch"]="${{ github.ref_name }}"
               fi
             else
-              CI_VARS["gitref"]="${{ github.ref_name }}"
+              CI_VARS["source-branch"]="${{ github.ref_name }}"
             fi
           else
-            CI_VARS["gitref"]="${{ github.ref_name }}"
+            echo "Warning: Invalid PR input '$pr_input'. Must be a PR number." >&2
+            CI_VARS["source-branch"]="${{ github.ref_name }}"
           fi
-        else
-          # For workflow_dispatch without pr input, gitref should match the current branch
-          # In this case, repo and gitref both refer to the same repository
-          CI_VARS["gitref"]="${{ github.ref_name }}"
         fi
         
         # Pull Request Variables
@@ -213,7 +299,7 @@ runs:
         CI_VARS["pr-title"]="${{ github.event.pull_request.title }}"
         CI_VARS["pr-author"]="${{ github.event.pull_request.user.login }}"
         CI_VARS["pr-draft"]="${{ github.event.pull_request.draft }}"
-        CI_VARS["is-pr-from-fork"]="${{ github.event.pull_request.head.repo.fork }}"
+        CI_VARS["pr-from-fork"]="${{ github.event.pull_request.head.repo.fork }}"
         
         # Issue Variables  
         CI_VARS["issue-number"]="${{ github.event.issue.number || github.event.pull_request.number }}"
@@ -231,6 +317,14 @@ runs:
         CI_VARS["actor"]="${{ github.actor }}"
         CI_VARS["run-id"]="${{ github.run_id }}"
         CI_VARS["run-number"]="${{ github.run_number }}"
+        
+        # Security Context
+        # restricted-security-mode is true when running from fork/dependabot and trigger is pull_request
+        if [[ "${{ github.event_name }}" == "pull_request" && ("${{ github.event.pull_request.head.repo.fork }}" == "true" || "${{ github.actor }}" == "dependabot[bot]") ]]; then
+          CI_VARS["restricted-security-mode"]="true"
+        else
+          CI_VARS["restricted-security-mode"]="false"
+        fi
         
         # Output each CI variable that has a value
         for var_name in "${!CI_VARS[@]}"; do
