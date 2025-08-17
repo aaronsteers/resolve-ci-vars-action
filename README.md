@@ -81,6 +81,111 @@ For help with Jinja2 expressions, check out these resources:
 
 ### Standard CI Vars
 
+The action automatically resolves common CI variables from GitHub context, eliminating the need for complex expressions like `${{ github.event.pull_request.head.repo.full_name || github.repository }}` throughout your workflows.
+
+#### Standard CI Variables Reference
+
+| Variable | Description | Example Value |
+|----------|-------------|---------------|
+| **Resolved Variables (always the effective context)** |
+| `resolved-git-ref` | Full Git ref (`refs/heads/...` or `refs/tags/...`) | `refs/heads/feature/new-connector` |
+| `resolved-git-branch` | Short branch name (e.g. `main`, `feature/foo`) | `feature/new-connector` |
+| `resolved-git-sha` | Commit SHA | `abc123...` |
+| `resolved-git-tag` | Tag name (if applicable) | `v1.0.0` |
+| `resolved-repo-name` | Repository name (e.g. `my-repo`) | `airbyte` |
+| `resolved-repo-owner` | Repository owner (user or org) | `airbytehq` |
+| `resolved-repo-name-full` | Owner + name (e.g. `myorg/my-repo`) | `airbytehq/airbyte` |
+| `resolved-git-branch-url` | URL to the branch in GitHub | `https://github.com/airbytehq/airbyte/tree/feature/new-connector` |
+| `resolved-git-commit-url` | URL to the commit in GitHub | `https://github.com/airbytehq/airbyte/commit/abc123...` |
+| **PR Source Variables (for PR workflows)** |
+| `pr-source-git-ref` | Git ref of the source (PR head) | `refs/heads/feature/new-connector` |
+| `pr-source-git-branch` | Branch name of the source | `feature/new-connector` |
+| `pr-source-git-sha` | SHA of the source commit | `abc123...` |
+| `pr-source-repo-name` | Source repo name | `airbyte` |
+| `pr-source-repo-owner` | Source repo owner | `contributor` |
+| `pr-source-repo-name-full` | Full source repo name (owner/name) | `contributor/airbyte` |
+| `pr-source-git-branch-url` | URL to the source branch | `https://github.com/contributor/airbyte/tree/feature/new-connector` |
+| `pr-source-git-commit-url` | URL to the source commit | `https://github.com/contributor/airbyte/commit/abc123...` |
+| `pr-source-is-fork` | Whether the source repo is a fork | `true` |
+| **PR Target Variables (for PR workflows)** |
+| `pr-target-git-ref` | Git ref of the target (PR base) | `refs/heads/main` |
+| `pr-target-git-branch` | Branch name of the target | `main` |
+| `pr-target-git-sha` | SHA of the target commit | `def456...` |
+| `pr-target-git-tag` | Tag name, if PR targets a tag | `` |
+| `pr-target-repo-name` | Target repo name | `airbyte` |
+| `pr-target-repo-owner` | Target repo owner | `airbytehq` |
+| `pr-target-repo-name-full` | Full target repo name (owner/name) | `airbytehq/airbyte` |
+| `pr-target-git-branch-url` | URL to the target branch | `https://github.com/airbytehq/airbyte/tree/main` |
+| `pr-target-git-commit-url` | URL to the target commit | `https://github.com/airbytehq/airbyte/commit/def456...` |
+| **Additional Resolved Metadata** |
+| `pr-number` | Pull request number (if applicable) | `12345` |
+| `pr-url` | URL to the pull request | `https://github.com/airbytehq/airbyte/pull/12345` |
+| `pr-title` | Title of the pull request | `feat: Add new connector` |
+| `comment-id` | ID of the triggering comment (if applicable) | `987654321` |
+| `comment-url` | URL to the triggering comment (if applicable) | `https://github.com/airbytehq/airbyte/issues/12345#issuecomment-987654321` |
+| `run-id` | GitHub Actions run ID | `123456789` |
+| `run-url` | URL to the GitHub Actions run | `https://github.com/airbytehq/airbyte/actions/runs/123456789` |
+| `is-pr` | Boolean: whether the current context is a PR | `true` |
+
+#### Usage Example
+
+```yaml
+- name: Resolve CI variables
+  id: vars
+  uses: aaronsteers/resolve-vars-action@v1
+  with:
+    static_inputs: |
+      custom_var=my_value
+
+- name: Use resolved variables
+  run: |
+    echo "PR Number: ${{ steps.vars.outputs.pr-number }}"
+    echo "Resolved Branch: ${{ steps.vars.outputs.resolved-git-branch }}"
+    echo "Repository: ${{ steps.vars.outputs.resolved-repo-name-full }}"
+    echo "All variables: ${{ steps.vars.outputs.custom }}"
+```
+
+#### Workflow Dispatch Auto-Detection
+
+The action automatically detects and resolves common workflow_dispatch inputs:
+
+- **PR inputs**: `pr` or `pr-number` - Automatically resolves PR context and updates resolved variables to point to PR head
+- **Comment inputs**: `comment-id` - Resolves comment metadata for slash command workflows  
+- **Issue inputs**: `issue-id` or `issue-number` - Resolves issue context and constructs URLs
+
+```yaml
+# Example workflow_dispatch with auto-detected inputs
+on:
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: 'PR number to operate on'
+        required: false
+      comment-id:
+        description: 'Comment ID that triggered this'
+        required: false
+      issue-number:
+        description: 'Issue number'
+        required: false
+
+jobs:
+  example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aaronsteers/resolve-vars-action@v1
+        id: vars
+      # All workflow_dispatch inputs are now available as resolved variables
+      - run: echo "Operating on PR: ${{ steps.vars.outputs.pr-number }}"
+```
+
+**Key Features:**
+- **Smart resolved context**: `resolved-*` variables always point to the effective working context (PR head for PRs, current branch otherwise)
+- **Explicit PR source/target**: Separate `pr-source-*` and `pr-target-*` variables for fine-grained PR workflows
+- **URL generation**: Automatic GitHub URLs for branches, commits, PRs, and comments
+- **Fork-aware**: Properly distinguishes between source and target repositories in fork scenarios
+- **Context detection**: `is-pr` boolean and other metadata for workflow logic
+- **Workflow dispatch auto-detection**: Automatically detects and resolves `pr`/`pr-number`, `comment-id`, and `issue-id`/`issue-number` inputs
+
 ---
 
 ## ✨ Features
@@ -126,9 +231,8 @@ jobs:
 
 | Name            | Description                                                                                         | Required | Default |
 |----------------|-----------------------------------------------------------------------------------------------------|----------|---------|
-| `static_inputs`| Comma-separated list of input variable names to coalesce                                           | ❌       |         |
-| `jinja_inputs` | Jinja2 expression to evaluate (e.g. `user or default_user`)                                         | ❌       |         |
-| `var1`-`var3`  | Optional named expressions. Will be exposed as `var1`-`var3` outputs.                  | ❌       |         |
+| `static_inputs`| Variable assignments in key=value format (multiline string)                                        | ❌       |         |
+| `jinja_inputs` | Jinja2 expressions to evaluate (e.g. `user or default_user`)                                       | ❌       |         |
 | `log_outputs`  | Whether to log resolved values to the console and step summary                                      | ❌       | `false` |
 | `non_sensitive`| Alias for `log_outputs`                                                                            | ❌       | `false` |
 
@@ -136,13 +240,13 @@ jobs:
 
 ## 📤 Outputs
 
-| Output Name | Description                                                    | Input Aliases              |
-|-------------|----------------------------------------------------------------|----------------------------|
-| `result`    | The resolved value from `static_inputs` or `jinja_inputs`     | `static_inputs`, `jinja_inputs` |
-| `var1`      | Custom user-defined output variable 1                         | `var1`                 |
-| `var2`      | Custom user-defined output variable 2                         | `var2`                 |
-| `var3`      | Custom user-defined output variable 3                         | `var3`                 |
-| `custom`    | JSON-encoded object with all resolved custom values           | N/A                        |
+| Output Name | Description                                                    |
+|-------------|----------------------------------------------------------------|
+| `custom`    | JSON-encoded object with all resolved values                  |
+| `var1`      | Custom user-defined output variable 1                         |
+| `var2`      | Custom user-defined output variable 2                         |
+| `var3`      | Custom user-defined output variable 3                         |
+| `{variable-name}` | Individual outputs for each resolved variable (e.g., `pr-number`, `resolved-git-branch`) |
 
 ---
 

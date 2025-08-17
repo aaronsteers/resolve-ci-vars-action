@@ -33,64 +33,159 @@ jobs:
       - name: Print outputs
         run: |
           echo "=== DEBUG: Raw output ==="
-          echo "steps.test-vars.outputs.all: '${{ steps.test-vars.outputs.all }}'"
+          echo "steps.test-vars.outputs.custom: '${{ steps.test-vars.outputs.custom }}'"
           echo "=========================="
 
       - name: Verify outputs
         run: |
           # Check static variables
-          if [ "${{ fromJSON(steps.test-vars.outputs.all).username }}" != "testuser" ]; then
+          if [ "${{ fromJSON(steps.test-vars.outputs.custom).username }}" != "testuser" ]; then
             echo "ERROR: username output doesn't match expected value"
             exit 1
           fi
 
-          if [ "${{ fromJSON(steps.test-vars.outputs.all).environment }}" != "development" ]; then
+          if [ "${{ fromJSON(steps.test-vars.outputs.custom).environment }}" != "development" ]; then
             echo "ERROR: environment output doesn't match expected value"
             exit 1
           fi
 
           # Check jinja variables
-          if [ "${{ fromJSON(steps.test-vars.outputs.all).greeting }}" != "Hello, World!" ]; then
+          if [ "${{ fromJSON(steps.test-vars.outputs.custom).greeting }}" != "Hello, World!" ]; then
             echo "ERROR: greeting output doesn't match expected value"
             echo "Expected: Hello, World!"
-            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.all).greeting }}"
+            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.custom).greeting }}"
             exit 1
           fi
 
-          if [ "${{ fromJSON(steps.test-vars.outputs.all).is_prod }}" != "False" ]; then
+          if [ "${{ fromJSON(steps.test-vars.outputs.custom).is_prod }}" != "False" ]; then
             echo "ERROR: is_prod output doesn't match expected value"
             echo "Expected: False"
-            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.all).is_prod }}"
+            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.custom).is_prod }}"
             exit 1
           fi
 
-          if [ "${{ fromJSON(steps.test-vars.outputs.all).computed_name }}" != "testuser_development" ]; then
+          if [ "${{ fromJSON(steps.test-vars.outputs.custom).computed_name }}" != "testuser_development" ]; then
             echo "ERROR: computed_name output doesn't match expected value"
             echo "Expected: testuser_development"
-            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.all).computed_name }}"
+            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.custom).computed_name }}"
             exit 1
           fi
 
-          if [ "${{ fromJSON(steps.test-vars.outputs.all).port_number }}" != "443" ]; then
+          if [ "${{ fromJSON(steps.test-vars.outputs.custom).port_number }}" != "443" ]; then
             echo "ERROR: port_number output doesn't match expected value"
             echo "Expected: 443"
-            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.all).port_number }}"
+            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.custom).port_number }}"
             exit 1
           fi
 
-          if [ "${{ fromJSON(steps.test-vars.outputs.all).answer }}" != "42" ]; then
+          if [ "${{ fromJSON(steps.test-vars.outputs.custom).answer }}" != "42" ]; then
             echo "ERROR: answer output doesn't match expected value"
             echo "Expected: 42"
-            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.all).answer }}"
+            echo "Actual: ${{ fromJSON(steps.test-vars.outputs.custom).answer }}"
             exit 1
           fi
 
           echo "✅ All tests passed!"
           echo "Static outputs:"
-          echo "  username: ${{ fromJSON(steps.test-vars.outputs.all).username }}"
-          echo "  environment: ${{ fromJSON(steps.test-vars.outputs.all).environment }}"
+          echo "  username: ${{ fromJSON(steps.test-vars.outputs.custom).username }}"
+          echo "  environment: ${{ fromJSON(steps.test-vars.outputs.custom).environment }}"
           echo "Jinja outputs:"
-          echo "  greeting: ${{ fromJSON(steps.test-vars.outputs.all).greeting }}"
-          echo "  is_prod: ${{ fromJSON(steps.test-vars.outputs.all).is_prod }}"
-          echo "  computed_name: ${{ fromJSON(steps.test-vars.outputs.all).computed_name }}"
-          echo "  port_number: ${{ fromJSON(steps.test-vars.outputs.all).port_number }}"
+          echo "  greeting: ${{ fromJSON(steps.test-vars.outputs.custom).greeting }}"
+          echo "  is_prod: ${{ fromJSON(steps.test-vars.outputs.custom).is_prod }}"
+          echo "  computed_name: ${{ fromJSON(steps.test-vars.outputs.custom).computed_name }}"
+          echo "  port_number: ${{ fromJSON(steps.test-vars.outputs.custom).port_number }}"
+
+  test-standard-ci-vars:
+    name: Test Standard CI Variables
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test standard CI vars enabled
+        id: test-ci-vars
+        uses: ./
+        with:
+          log_outputs: true
+          static_inputs: |
+            custom_var=test_value
+
+      - name: Print CI variables output
+        run: |
+          echo "=== DEBUG: Standard CI Variables ==="
+          echo "All variables: ${{ steps.test-ci-vars.outputs.custom }}"
+          echo "Resolved repo: ${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}"
+          echo "Resolved branch: ${{ steps.test-ci-vars.outputs.resolved-git-branch }}"
+          echo "PR number: ${{ steps.test-ci-vars.outputs.pr-number }}"
+          echo "Run ID: ${{ steps.test-ci-vars.outputs.run-id }}"
+          echo "Is PR: ${{ steps.test-ci-vars.outputs.is-pr }}"
+          echo "=================================="
+
+      - name: Verify standard CI variables
+        run: |
+          # Check that standard CI variables are populated
+          if [ -z "${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}" ]; then
+            echo "ERROR: resolved-repo-name-full variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.resolved-git-branch }}" ]; then
+            echo "ERROR: resolved-git-branch variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.resolved-repo-owner }}" ]; then
+            echo "ERROR: resolved-repo-owner variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.resolved-repo-name }}" ]; then
+            echo "ERROR: resolved-repo-name variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.run-id }}" ]; then
+            echo "ERROR: run-id variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.is-pr }}" ]; then
+            echo "ERROR: is-pr variable should be populated"
+            exit 1
+          fi
+
+          # Verify resolved-repo-name-full matches expected format
+          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}" != "aaronsteers/resolve-vars-action" ]; then
+            echo "ERROR: resolved-repo-name-full should be aaronsteers/resolve-vars-action"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}"
+            exit 1
+          fi
+
+          # Verify resolved-repo-owner matches expected value
+          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-owner }}" != "aaronsteers" ]; then
+            echo "ERROR: resolved-repo-owner should be aaronsteers"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.resolved-repo-owner }}"
+            exit 1
+          fi
+
+          # Verify resolved-repo-name matches expected value
+          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-name }}" != "resolve-vars-action" ]; then
+            echo "ERROR: resolved-repo-name should be resolve-vars-action"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.resolved-repo-name }}"
+            exit 1
+          fi
+
+          # Verify is-pr is false for non-PR events (this test runs on pull_request so should be true)
+          if [ "${{ steps.test-ci-vars.outputs.is-pr }}" != "true" ]; then
+            echo "ERROR: is-pr should be true for pull_request events"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.is-pr }}"
+            exit 1
+          fi
+
+          # Check that custom variables are still included
+          if [ "${{ fromJSON(steps.test-ci-vars.outputs.custom).custom_var }}" != "test_value" ]; then
+            echo "ERROR: custom_var should still be included with standard CI vars"
+            exit 1
+          fi
+
+          echo "✅ Standard CI variables test passed!"
