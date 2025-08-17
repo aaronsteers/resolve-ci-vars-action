@@ -244,8 +244,8 @@ jobs:
 
           echo "✅ Standard CI variables test passed!"
 
-      - name: Run Variable Resolution (Explicit PR Number)
-        id: test-vars
+      - name: Run Variable Resolution (Explicit PR 5)
+        id: test-vars-explicit-pr
         uses: ./
         with:
           pr: 5
@@ -263,3 +263,77 @@ jobs:
             computed_name='${{ 'testuser' }}' + '_' + '${{ 'development' }}'
             port_number=8080 if 'true' == 'false' else 443
             answer=42
+
+      - name: Verify standard CI variables (explicit PR)
+        run: |
+          # Check that standard CI variables are populated
+          if [ "${{ steps.test-ci-vars.outputs.pr-number }}" != "5" ]; then
+            echo "ERROR: pr-number variable should be 5"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}" ]; then
+            echo "ERROR: resolved-repo-name-full variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.resolved-git-branch }}" ]; then
+            echo "ERROR: resolved-git-branch variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.resolved-repo-owner }}" ]; then
+            echo "ERROR: resolved-repo-owner variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.resolved-repo-name }}" ]; then
+            echo "ERROR: resolved-repo-name variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.run-id }}" ]; then
+            echo "ERROR: run-id variable should be populated"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.test-ci-vars.outputs.is-pr }}" ]; then
+            echo "ERROR: is-pr variable should be populated"
+            exit 1
+          fi
+
+          # Verify resolved-repo-name-full matches expected format
+          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}" != "aaronsteers/resolve-ci-vars-action" ]; then
+            echo "ERROR: resolved-repo-name-full should be aaronsteers/resolve-ci-vars-action"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}"
+            exit 1
+          fi
+
+          # Verify resolved-repo-owner matches expected value
+          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-owner }}" != "aaronsteers" ]; then
+            echo "ERROR: resolved-repo-owner should be aaronsteers"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.resolved-repo-owner }}"
+            exit 1
+          fi
+
+          # Verify resolved-repo-name matches expected value
+          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-name }}" != "resolve-ci-vars-action" ]; then
+            echo "ERROR: resolved-repo-name should be resolve-ci-vars-action"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.resolved-repo-name }}"
+            exit 1
+          fi
+
+          # Verify is-pr is false for non-PR events (this test runs on pull_request so should be true)
+          if [ "${{ steps.test-ci-vars.outputs.is-pr }}" != "true" ]; then
+            echo "ERROR: is-pr should be true for pull_request events"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.is-pr }}"
+            exit 1
+          fi
+
+          # Check that custom variables are still included
+          if [ "${{ fromJSON(steps.test-ci-vars.outputs.custom).custom_var }}" != "test_value" ]; then
+            echo "ERROR: custom_var should still be included with standard CI vars"
+            exit 1
+          fi
+
+          echo "✅ Standard CI variables test passed!"
