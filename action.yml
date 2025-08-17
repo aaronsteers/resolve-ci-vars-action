@@ -75,12 +75,12 @@ runs:
         # Process jinja_inputs if provided
         if [[ -n "${{ inputs.jinja_inputs }}" ]]; then
           echo "Processing Jinja inputs..."
-          
-          # Create a temporary variables file for the current resolved vars
-          temp_vars_file=$(mktemp)
-          temp_jinja_template=$(mktemp)
-          temp_jinja_output=$(mktemp)
-          
+
+          # Create temporary files in the workspace (accessible to Docker containers)
+          temp_vars_file="$GITHUB_WORKSPACE/.temp_vars.json"
+          temp_jinja_template="$GITHUB_WORKSPACE/.temp_template.j2"
+          temp_jinja_output="$GITHUB_WORKSPACE/.temp_output.txt"
+
           # Write current resolved variables to JSON file
           echo "{" > "$temp_vars_file"
           first=true
@@ -96,7 +96,7 @@ runs:
           done
           echo "" >> "$temp_vars_file"
           echo "}" >> "$temp_vars_file"
-          
+
           # Save jinja_inputs and temp files to environment for next step
           echo "JINJA_INPUTS_DATA=${{ inputs.jinja_inputs }}" >> "$GITHUB_ENV"
           echo "TEMP_VARS_FILE=$temp_vars_file" >> "$GITHUB_ENV"
