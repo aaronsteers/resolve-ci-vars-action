@@ -157,6 +157,8 @@ runs:
             echo "$NEW_JINJA_LINE" >> "$TEMP_JINJA_TEMPLATE"
           fi
         done <<< "${{ format('{0}{1}', inputs.jinja_inputs, '\n')  }}"
+        # End file with newline
+        echo "" >> "$TEMP_JINJA_TEMPLATE"
 
         # Debug: Print the template file contents
         echo "=== Generated Jinja template ==="
@@ -211,8 +213,6 @@ runs:
           echo "=== End Jinja output ==="
 
           echo "Processing Jinja results..."
-          # Append a newline at the end of the file before we start
-          echo "" >> "$TEMP_JINJA_OUTPUT"
           while IFS= read -r line; do
             [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
             if [[ "$line" =~ ^([^=]+)=(.*)$ ]]; then
