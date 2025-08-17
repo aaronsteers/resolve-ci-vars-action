@@ -24,9 +24,9 @@ inputs:
     default: 'false'
     required: false
 outputs:
-  custom:
-    value: ${{ steps.resolve.outputs.custom }}
-    description: 'JSON-encoded object with all resolved custom values'
+  all:
+    value: ${{ steps.resolve.outputs.all_vars }}
+    description: 'JSON-encoded object with all resolved values'
   var1:
     value: ${{ steps.resolve.outputs.var1 }}
     description: 'Custom user-defined output variable 1'
@@ -42,7 +42,7 @@ runs:
     - id: resolve
       shell: bash
       run: |
-        RESULT=""
+        ALL_VARS=""
         declare -A RESOLVED_VARS
 
         # Process static_inputs
@@ -67,9 +67,9 @@ runs:
               # Store in associative array
               RESOLVED_VARS["$var_name"]="$var_value"
 
-              # Set the first non-empty value as result
-              if [[ -z "$RESULT" && -n "$var_value" ]]; then
-                RESULT="$var_value"
+              # Set ALL_VARS to the first non-empty value
+              if [[ -z "$ALL_VARS" && -n "$var_value" ]]; then
+                ALL_VARS="$var_value"
               fi
 
               # Output each variable
@@ -78,8 +78,8 @@ runs:
           done <<< "${{ inputs.static_inputs }}"
         fi
 
-        # Output the result
-        echo "result=$RESULT" >> "$GITHUB_OUTPUT"
+        # Output the "all variables" output
+        echo "all=$ALL_VARS" >> "$GITHUB_OUTPUT"
 
         # Logging
         SHOULD_LOG="${{ inputs.log_outputs == 'true' || inputs.non_sensitive == 'true' }}"
@@ -88,13 +88,13 @@ runs:
           for var_name in "${!RESOLVED_VARS[@]}"; do
             echo "  $var_name: ${RESOLVED_VARS[$var_name]}"
           done
-          echo "  result: $RESULT"
+          echo "  all_vars: $ALL_VARS"
 
           {
             echo "### 🔍 Variable Resolution Summary"
             for var_name in "${!RESOLVED_VARS[@]}"; do
               echo "- \`$var_name\`: ${RESOLVED_VARS[$var_name]}"
             done
-            echo "- \`result\`: $RESULT"
+            echo "- \`all_vars\`: $ALL_VARS"
           } >> "$GITHUB_STEP_SUMMARY"
         fi
