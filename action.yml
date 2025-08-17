@@ -236,8 +236,6 @@ runs:
         fi
         CI_VARS["repo-name"]="$repo_name"
         CI_VARS["repo-name-full"]="${{ github.event.pull_request.base.repo.full_name || github.repository }}"
-        CI_VARS["repo-name-full"]="${{ github.event.pull_request.base.repo.full_name || github.repository }}"
-        CI_VARS["repo-name-full"]="${{ github.event.pull_request.base.repo.full_name || github.repository }}"
         
         # Git refs - only populate for PR events, null for issue events and workflow_dispatch without pr input
         if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_target" ]]; then
