@@ -132,6 +132,9 @@ runs:
         > "$TEMP_JINJA_TEMPLATE"  # Clear the file first
 
         while IFS= read -r line; do
+          # Debug: Show what line we're processing
+          echo "DEBUG: Processing line: '$line'"
+
           # Skip empty lines and comments
           [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
 
@@ -144,7 +147,11 @@ runs:
             var_name=$(echo "$var_name" | xargs)
 
             # Append to template file - each line will be VAR_NAME={{ expression }}
-            echo "${var_name}={{ ${expression} }}" >> "$TEMP_JINJA_TEMPLATE"
+            NEW_JINJA_LINE="${var_name}={{ ${expression} }}"
+            # Debug: Show what we're about to write
+            echo "DEBUG: Adding to template: ${NEW_JINJA_LINE}"
+
+            echo "$NEW_JINJA_LINE" >> "$TEMP_JINJA_TEMPLATE"
           fi
         done <<< "$JINJA_INPUTS_DATA"
 
