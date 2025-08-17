@@ -195,10 +195,10 @@ runs:
               RESOLVED_VARS["$var_name"]="$var_value"
               echo "$var_name=$var_value" >> "$GITHUB_OUTPUT"
             fi
-          done < "$temp_jinja_output"
+          done < "$TEMP_JINJA_OUTPUT"
 
           # Clean up temp files
-          rm -f "$temp_vars_file" "$temp_jinja_template" "$temp_jinja_output"
+          rm -f "$TEMP_VARS_FILE" "$TEMP_JINJA_TEMPLATE" "$TEMP_JINJA_OUTPUT"
         fi
 
         # Build final JSON object with all resolved variables
