@@ -2,27 +2,56 @@ name: Test Action
 
 on:
   push:
-    branches: [ main, master ]
   pull_request:
-    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
-  test-action:
+  test-resolve-vars:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Test Action with minimal inputs
-        id: test-minimal
+      - name: Test resolve vars action
+        id: test-vars
         uses: ./
         with:
-          prompt-text: "This is a test of the Devin action"
-          devin-token: "test-token-placeholder"
-        continue-on-error: true
+          static_inputs: |
+            username=testuser
+            environment=development
+          jinja_inputs: |
+            greeting='Hello, ' + 'World!'
+            is_prod=False
+          log_outputs: true
 
-      - name: Check test results
+      - name: Verify outputs
         run: |
-          echo "Test completed with exit code: ${{ steps.test-minimal.outcome }}"
-          # In a real test, we would validate the outputs
-          # For now, we just ensure the action doesn't crash on basic input validation
+          # Check static variables
+          if [ "${{ steps.test-vars.outputs.username }}" != "testuser" ]; then
+            echo "ERROR: username output doesn't match expected value"
+            exit 1
+          fi
+
+          if [ "${{ steps.test-vars.outputs.environment }}" != "development" ]; then
+            echo "ERROR: environment output doesn't match expected value"
+            exit 1
+          fi
+
+          # Check jinja variables
+          if [ "${{ steps.test-vars.outputs.greeting }}" != "Hello, World!" ]; then
+            echo "ERROR: greeting output doesn't match expected value"
+            exit 1
+          fi
+
+          if [ "${{ steps.test-vars.outputs.is_prod }}" != "False" ]; then
+            echo "ERROR: is_prod output doesn't match expected value"
+            exit 1
+          fi
+
+          echo "✅ All tests passed!"
+          echo "Static outputs:"
+          echo "  username: ${{ steps.test-vars.outputs.username }}"
+          echo "  environment: ${{ steps.test-vars.outputs.environment }}"
+          echo "Jinja outputs:"
+          echo "  greeting: ${{ steps.test-vars.outputs.greeting }}"
+          echo "  is_prod: ${{ steps.test-vars.outputs.is_prod }}"
