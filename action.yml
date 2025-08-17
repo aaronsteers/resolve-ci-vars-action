@@ -1,4 +1,7 @@
 name: Resolve Vars
+branding:
+  icon: list
+  color: blue
 description: |
   Resolve variables using a combination of (1) pre-built resolutions, (2) static inputs, and (3) Jinja2 expressions.
 inputs:
