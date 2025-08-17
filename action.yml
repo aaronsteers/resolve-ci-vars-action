@@ -25,7 +25,7 @@ inputs:
     required: false
 outputs:
   custom:
-    value: ${{ steps.merge-results.outputs.all_vars }}
+    value: ${{ steps.merge-results.outputs.custom }}
     description: 'JSON-encoded object with all resolved values'
   # Resolved Variables (always the effective context)
   resolved-git-ref:
@@ -46,8 +46,8 @@ outputs:
   resolved-repo-owner:
     value: ${{ steps.merge-results.outputs.resolved-repo-owner }}
     description: 'Repository owner (user or org)'
-  resolved-repo-full-name:
-    value: ${{ steps.merge-results.outputs.resolved-repo-full-name }}
+  resolved-repo-name-full:
+    value: ${{ steps.merge-results.outputs.resolved-repo-name-full }}
     description: 'Owner + name (e.g. myorg/my-repo)'
   resolved-git-branch-url:
     value: ${{ steps.merge-results.outputs.resolved-git-branch-url }}
@@ -71,8 +71,8 @@ outputs:
   pr-source-repo-owner:
     value: ${{ steps.merge-results.outputs.pr-source-repo-owner }}
     description: 'Source repo owner'
-  pr-source-repo-full-name:
-    value: ${{ steps.merge-results.outputs.pr-source-repo-full-name }}
+  pr-source-repo-name-full:
+    value: ${{ steps.merge-results.outputs.pr-source-repo-name-full }}
     description: 'Full source repo name (owner/name)'
   pr-source-git-branch-url:
     value: ${{ steps.merge-results.outputs.pr-source-git-branch-url }}
@@ -102,8 +102,8 @@ outputs:
   pr-target-repo-owner:
     value: ${{ steps.merge-results.outputs.pr-target-repo-owner }}
     description: 'Target repo owner'
-  pr-target-repo-full-name:
-    value: ${{ steps.merge-results.outputs.pr-target-repo-full-name }}
+  pr-target-repo-name-full:
+    value: ${{ steps.merge-results.outputs.pr-target-repo-name-full }}
     description: 'Full target repo name (owner/name)'
   pr-target-git-branch-url:
     value: ${{ steps.merge-results.outputs.pr-target-git-branch-url }}
@@ -257,7 +257,7 @@ runs:
           CI_VARS["resolved-git-ref"]="refs/heads/${{ github.head_ref || github.ref_name }}"
           CI_VARS["resolved-git-branch"]="${{ github.head_ref || github.ref_name }}"
           CI_VARS["resolved-git-sha"]="${{ github.event.pull_request.head.sha || github.sha }}"
-          CI_VARS["resolved-repo-full-name"]="${{ github.event.pull_request.head.repo.full_name || github.repository }}"
+          CI_VARS["resolved-repo-name-full"]="${{ github.event.pull_request.head.repo.full_name || github.repository }}"
           CI_VARS["resolved-repo-owner"]="${{ github.event.pull_request.head.repo.owner.login || github.repository_owner }}"
           resolved_repo_name="${{ github.event.pull_request.head.repo.name }}"
           if [[ -z "$resolved_repo_name" ]]; then
@@ -269,7 +269,7 @@ runs:
           CI_VARS["resolved-git-ref"]="${{ github.ref }}"
           CI_VARS["resolved-git-branch"]="${{ github.ref_name }}"
           CI_VARS["resolved-git-sha"]="${{ github.sha }}"
-          CI_VARS["resolved-repo-full-name"]="${{ github.repository }}"
+          CI_VARS["resolved-repo-name-full"]="${{ github.repository }}"
           CI_VARS["resolved-repo-owner"]="${{ github.repository_owner }}"
           repo_name="${{ github.event.repository.name }}"
           if [[ -z "$repo_name" ]]; then
@@ -280,8 +280,8 @@ runs:
         fi
         
         # Generate URLs for resolved context
-        CI_VARS["resolved-git-branch-url"]="https://github.com/${CI_VARS["resolved-repo-full-name"]}/tree/${CI_VARS["resolved-git-branch"]}"
-        CI_VARS["resolved-git-commit-url"]="https://github.com/${CI_VARS["resolved-repo-full-name"]}/commit/${CI_VARS["resolved-git-sha"]}"
+        CI_VARS["resolved-git-branch-url"]="https://github.com/${CI_VARS["resolved-repo-name-full"]}/tree/${CI_VARS["resolved-git-branch"]}"
+        CI_VARS["resolved-git-commit-url"]="https://github.com/${CI_VARS["resolved-repo-name-full"]}/commit/${CI_VARS["resolved-git-sha"]}"
         
         # Git tag (if applicable)
         if [[ "${{ github.ref }}" =~ ^refs/tags/ ]]; then
@@ -296,29 +296,29 @@ runs:
           CI_VARS["pr-source-git-ref"]="refs/heads/${{ github.head_ref }}"
           CI_VARS["pr-source-git-branch"]="${{ github.head_ref }}"
           CI_VARS["pr-source-git-sha"]="${{ github.event.pull_request.head.sha }}"
-          CI_VARS["pr-source-repo-full-name"]="${{ github.event.pull_request.head.repo.full_name }}"
+          CI_VARS["pr-source-repo-name-full"]="${{ github.event.pull_request.head.repo.full_name }}"
           CI_VARS["pr-source-repo-owner"]="${{ github.event.pull_request.head.repo.owner.login }}"
           CI_VARS["pr-source-repo-name"]="${{ github.event.pull_request.head.repo.name }}"
           CI_VARS["pr-source-is-fork"]="${{ github.event.pull_request.head.repo.fork }}"
-          CI_VARS["pr-source-git-branch-url"]="https://github.com/${CI_VARS["pr-source-repo-full-name"]}/tree/${CI_VARS["pr-source-git-branch"]}"
-          CI_VARS["pr-source-git-commit-url"]="https://github.com/${CI_VARS["pr-source-repo-full-name"]}/commit/${CI_VARS["pr-source-git-sha"]}"
+          CI_VARS["pr-source-git-branch-url"]="https://github.com/${CI_VARS["pr-source-repo-name-full"]}/tree/${CI_VARS["pr-source-git-branch"]}"
+          CI_VARS["pr-source-git-commit-url"]="https://github.com/${CI_VARS["pr-source-repo-name-full"]}/commit/${CI_VARS["pr-source-git-sha"]}"
           
           # PR Target (base)
           CI_VARS["pr-target-git-ref"]="refs/heads/${{ github.base_ref }}"
           CI_VARS["pr-target-git-branch"]="${{ github.base_ref }}"
           CI_VARS["pr-target-git-sha"]="${{ github.event.pull_request.base.sha }}"
-          CI_VARS["pr-target-repo-full-name"]="${{ github.event.pull_request.base.repo.full_name }}"
+          CI_VARS["pr-target-repo-name-full"]="${{ github.event.pull_request.base.repo.full_name }}"
           CI_VARS["pr-target-repo-owner"]="${{ github.event.pull_request.base.repo.owner.login }}"
           CI_VARS["pr-target-repo-name"]="${{ github.event.pull_request.base.repo.name }}"
-          CI_VARS["pr-target-git-branch-url"]="https://github.com/${CI_VARS["pr-target-repo-full-name"]}/tree/${CI_VARS["pr-target-git-branch"]}"
-          CI_VARS["pr-target-git-commit-url"]="https://github.com/${CI_VARS["pr-target-repo-full-name"]}/commit/${CI_VARS["pr-target-git-sha"]}"
+          CI_VARS["pr-target-git-branch-url"]="https://github.com/${CI_VARS["pr-target-repo-name-full"]}/tree/${CI_VARS["pr-target-git-branch"]}"
+          CI_VARS["pr-target-git-commit-url"]="https://github.com/${CI_VARS["pr-target-repo-name-full"]}/commit/${CI_VARS["pr-target-git-sha"]}"
           CI_VARS["pr-target-git-tag"]=""
         else
           # For non-PR events, null out PR-specific variables
           CI_VARS["pr-source-git-ref"]=""
           CI_VARS["pr-source-git-branch"]=""
           CI_VARS["pr-source-git-sha"]=""
-          CI_VARS["pr-source-repo-full-name"]=""
+          CI_VARS["pr-source-repo-name-full"]=""
           CI_VARS["pr-source-repo-owner"]=""
           CI_VARS["pr-source-repo-name"]=""
           CI_VARS["pr-source-is-fork"]=""
@@ -327,7 +327,7 @@ runs:
           CI_VARS["pr-target-git-ref"]=""
           CI_VARS["pr-target-git-branch"]=""
           CI_VARS["pr-target-git-sha"]=""
-          CI_VARS["pr-target-repo-full-name"]=""
+          CI_VARS["pr-target-repo-name-full"]=""
           CI_VARS["pr-target-repo-owner"]=""
           CI_VARS["pr-target-repo-name"]=""
           CI_VARS["pr-target-git-branch-url"]=""
@@ -354,7 +354,7 @@ runs:
                   # Update resolved variables to point to PR head
                   CI_VARS["resolved-git-ref"]="refs/heads/$source_branch"
                   CI_VARS["resolved-git-branch"]="$source_branch"
-                  CI_VARS["resolved-repo-full-name"]="$source_repo"
+                  CI_VARS["resolved-repo-name-full"]="$source_repo"
                   CI_VARS["resolved-repo-owner"]="$source_owner"
                   CI_VARS["resolved-repo-name"]="$source_repo_name"
                   CI_VARS["resolved-git-branch-url"]="https://github.com/$source_repo/tree/$source_branch"

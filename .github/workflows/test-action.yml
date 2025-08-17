@@ -114,7 +114,7 @@ jobs:
         run: |
           echo "=== DEBUG: Standard CI Variables ==="
           echo "All variables: ${{ steps.test-ci-vars.outputs.custom }}"
-          echo "Resolved repo: ${{ steps.test-ci-vars.outputs.resolved-repo-full-name }}"
+          echo "Resolved repo: ${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}"
           echo "Resolved branch: ${{ steps.test-ci-vars.outputs.resolved-git-branch }}"
           echo "PR number: ${{ steps.test-ci-vars.outputs.pr-number }}"
           echo "Run ID: ${{ steps.test-ci-vars.outputs.run-id }}"
@@ -124,8 +124,8 @@ jobs:
       - name: Verify standard CI variables
         run: |
           # Check that standard CI variables are populated
-          if [ -z "${{ steps.test-ci-vars.outputs.resolved-repo-full-name }}" ]; then
-            echo "ERROR: resolved-repo-full-name variable should be populated"
+          if [ -z "${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}" ]; then
+            echo "ERROR: resolved-repo-name-full variable should be populated"
             exit 1
           fi
 
@@ -154,10 +154,10 @@ jobs:
             exit 1
           fi
 
-          # Verify resolved-repo-full-name matches expected format
-          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-full-name }}" != "aaronsteers/resolve-vars-action" ]; then
-            echo "ERROR: resolved-repo-full-name should be aaronsteers/resolve-vars-action"
-            echo "Actual: ${{ steps.test-ci-vars.outputs.resolved-repo-full-name }}"
+          # Verify resolved-repo-name-full matches expected format
+          if [ "${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}" != "aaronsteers/resolve-vars-action" ]; then
+            echo "ERROR: resolved-repo-name-full should be aaronsteers/resolve-vars-action"
+            echo "Actual: ${{ steps.test-ci-vars.outputs.resolved-repo-name-full }}"
             exit 1
           fi
 

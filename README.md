@@ -94,7 +94,7 @@ The action automatically resolves common CI variables from GitHub context, elimi
 | `resolved-git-tag` | Tag name (if applicable) | `v1.0.0` |
 | `resolved-repo-name` | Repository name (e.g. `my-repo`) | `airbyte` |
 | `resolved-repo-owner` | Repository owner (user or org) | `airbytehq` |
-| `resolved-repo-full-name` | Owner + name (e.g. `myorg/my-repo`) | `airbytehq/airbyte` |
+| `resolved-repo-name-full` | Owner + name (e.g. `myorg/my-repo`) | `airbytehq/airbyte` |
 | `resolved-git-branch-url` | URL to the branch in GitHub | `https://github.com/airbytehq/airbyte/tree/feature/new-connector` |
 | `resolved-git-commit-url` | URL to the commit in GitHub | `https://github.com/airbytehq/airbyte/commit/abc123...` |
 | **PR Source Variables (for PR workflows)** |
@@ -103,7 +103,7 @@ The action automatically resolves common CI variables from GitHub context, elimi
 | `pr-source-git-sha` | SHA of the source commit | `abc123...` |
 | `pr-source-repo-name` | Source repo name | `airbyte` |
 | `pr-source-repo-owner` | Source repo owner | `contributor` |
-| `pr-source-repo-full-name` | Full source repo name (owner/name) | `contributor/airbyte` |
+| `pr-source-repo-name-full` | Full source repo name (owner/name) | `contributor/airbyte` |
 | `pr-source-git-branch-url` | URL to the source branch | `https://github.com/contributor/airbyte/tree/feature/new-connector` |
 | `pr-source-git-commit-url` | URL to the source commit | `https://github.com/contributor/airbyte/commit/abc123...` |
 | `pr-source-is-fork` | Whether the source repo is a fork | `true` |
@@ -114,7 +114,7 @@ The action automatically resolves common CI variables from GitHub context, elimi
 | `pr-target-git-tag` | Tag name, if PR targets a tag | `` |
 | `pr-target-repo-name` | Target repo name | `airbyte` |
 | `pr-target-repo-owner` | Target repo owner | `airbytehq` |
-| `pr-target-repo-full-name` | Full target repo name (owner/name) | `airbytehq/airbyte` |
+| `pr-target-repo-name-full` | Full target repo name (owner/name) | `airbytehq/airbyte` |
 | `pr-target-git-branch-url` | URL to the target branch | `https://github.com/airbytehq/airbyte/tree/main` |
 | `pr-target-git-commit-url` | URL to the target commit | `https://github.com/airbytehq/airbyte/commit/def456...` |
 | **Additional Resolved Metadata** |
@@ -141,7 +141,7 @@ The action automatically resolves common CI variables from GitHub context, elimi
   run: |
     echo "PR Number: ${{ steps.vars.outputs.pr-number }}"
     echo "Resolved Branch: ${{ steps.vars.outputs.resolved-git-branch }}"
-    echo "Repository: ${{ steps.vars.outputs.resolved-repo-full-name }}"
+    echo "Repository: ${{ steps.vars.outputs.resolved-repo-name-full }}"
     echo "All variables: ${{ steps.vars.outputs.custom }}"
 ```
 
