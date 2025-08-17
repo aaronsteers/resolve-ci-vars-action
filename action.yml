@@ -98,7 +98,6 @@ runs:
           echo "}" >> "$temp_vars_file"
 
           # Save jinja_inputs and temp files to environment for next step
-          echo "JINJA_INPUTS_DATA=${{ inputs.jinja_inputs }}" >> "$GITHUB_ENV"
           # Set environment variables for the jinja renderer
           echo "TEMP_VARS_FILE=$temp_vars_file" >> "$GITHUB_ENV"
           echo "TEMP_JINJA_TEMPLATE=$temp_jinja_template" >> "$GITHUB_ENV"
@@ -131,6 +130,10 @@ runs:
         # Create Jinja template to process jinja_inputs
         > "$TEMP_JINJA_TEMPLATE"  # Clear the file first
 
+        echo "=== Jinja inputs data ==="
+        echo '${{ inputs.jinja_inputs }}'
+        echo "=== Jinja inputs data ==="
+
         while IFS= read -r line; do
           # Debug: Show what line we're processing
           echo "DEBUG: Processing line: '$line'"
@@ -153,7 +156,7 @@ runs:
 
             echo "$NEW_JINJA_LINE" >> "$TEMP_JINJA_TEMPLATE"
           fi
-        done <<< "$JINJA_INPUTS_DATA"
+        done <<< "${{ inputs.jinja_inputs }}"
 
         # Debug: Print the template file contents
         echo "=== Generated Jinja template ==="
