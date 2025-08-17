@@ -150,7 +150,7 @@ runs:
             var_name=$(echo "$var_name" | xargs)
 
             # Append to template file - each line will be VAR_NAME={{ expression }}
-            NEW_JINJA_LINE="${var_name}={{ $expression }}"
+            NEW_JINJA_LINE="${var_name}={{ ${expression} }}"
             # Debug: Show what we're about to write
             echo "DEBUG: Adding to template: ${NEW_JINJA_LINE}"
 
