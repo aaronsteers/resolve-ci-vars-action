@@ -99,6 +99,7 @@ runs:
 
           # Save jinja_inputs and temp files to environment for next step
           echo "JINJA_INPUTS_DATA=${{ inputs.jinja_inputs }}" >> "$GITHUB_ENV"
+          # Set environment variables for the jinja renderer
           echo "TEMP_VARS_FILE=$temp_vars_file" >> "$GITHUB_ENV"
           echo "TEMP_JINJA_TEMPLATE=$temp_jinja_template" >> "$GITHUB_ENV"
           echo "TEMP_JINJA_OUTPUT=$temp_jinja_output" >> "$GITHUB_ENV"
@@ -194,10 +195,10 @@ runs:
               RESOLVED_VARS["$var_name"]="$var_value"
               echo "$var_name=$var_value" >> "$GITHUB_OUTPUT"
             fi
-          done < "$TEMP_JINJA_OUTPUT"
+          done < "$temp_jinja_output"
 
           # Clean up temp files
-          rm -f "$TEMP_VARS_FILE" "$TEMP_JINJA_TEMPLATE" "$TEMP_JINJA_OUTPUT"
+          rm -f "$temp_vars_file" "$temp_jinja_template" "$temp_jinja_output"
         fi
 
         # Build final JSON object with all resolved variables
