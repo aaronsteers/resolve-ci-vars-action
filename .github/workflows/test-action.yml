@@ -30,6 +30,12 @@ jobs:
             computed_name='${{ 'testuser' }}' + '_' + '${{ 'development' }}'
             port_number=8080 if 'true' == 'false' else 443
 
+      - name: Print outputs
+        run: |
+          echo "=== DEBUG: Raw output ==="
+          echo "steps.test-vars.outputs.all: '${{ steps.test-vars.outputs.all }}'"
+          echo "=========================="
+
       - name: Verify outputs
         run: |
           # Check static variables
