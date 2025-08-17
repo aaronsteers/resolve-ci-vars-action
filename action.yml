@@ -175,29 +175,36 @@ runs:
           CI_VARS["base-sha"]=""
         fi
         
-        # Smart gitref resolution - handles "run from main, operate on PR branch" pattern
+        # Smart gitref resolution - ensures compatibility with repo variable
         if [[ "${{ github.event_name }}" == "issues" || "${{ github.event_name }}" == "issue_comment" ]]; then
           # For issue events, null out gitref since issues don't have branches
           CI_VARS["gitref"]=""
+        elif [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_target" ]]; then
+          # For PR events, gitref should be the head ref (fork's branch name only, not repo/branch)
+          # This ensures gitref is just the branch name that exists on head-repo
+          CI_VARS["gitref"]="${{ github.head_ref }}"
         elif [[ -n "${{ inputs.pr }}" ]]; then
-          # When pr input exists, we need to fetch the actual PR head ref (fork's branch)
+          # When pr input exists (slash commands), fetch the PR head ref
           # This handles slash commands that run from main but operate on PR branch
           echo "Resolving gitref for PR ${{ inputs.pr }}..."
           if command -v gh >/dev/null 2>&1; then
             gitref=$(gh pr view "${{ inputs.pr }}" --json headRefName --jq '.headRefName' 2>/dev/null || echo "")
             if [[ -n "$gitref" ]]; then
               CI_VARS["gitref"]="$gitref"
+              # Also update head-repo to match the PR's head repo for consistency
+              head_repo=$(gh pr view "${{ inputs.pr }}" --json headRepository --jq '.headRepository.nameWithOwner' 2>/dev/null || echo "")
+              if [[ -n "$head_repo" ]]; then
+                CI_VARS["head-repo"]="$head_repo"
+              fi
             else
-              CI_VARS["gitref"]="${{ github.head_ref || github.ref_name }}"
+              CI_VARS["gitref"]="${{ github.ref_name }}"
             fi
           else
-            CI_VARS["gitref"]="${{ github.head_ref || github.ref_name }}"
+            CI_VARS["gitref"]="${{ github.ref_name }}"
           fi
-        elif [[ -n "${{ github.head_ref }}" ]]; then
-          # For direct PR events - use head ref (fork's branch)
-          CI_VARS["gitref"]="${{ github.head_ref }}"
         else
-          # Fallback to current ref (for workflow_dispatch without pr input)
+          # For workflow_dispatch without pr input, gitref should match the current branch
+          # In this case, repo and gitref both refer to the same repository
           CI_VARS["gitref"]="${{ github.ref_name }}"
         fi
         
@@ -345,6 +352,8 @@ runs:
             if [[ -n "$key" && -n "$value" ]]; then
               RESOLVED_VARS["$key"]="$value"
               echo "Added CI variable: $key = $value"
+              # Also output as individual GitHub Action output
+              echo "$key=$value" >> "$GITHUB_OUTPUT"
             fi
           done < <(echo "$CI_VARS_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"' 2>/dev/null || echo "")
         fi
