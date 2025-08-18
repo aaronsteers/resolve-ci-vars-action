@@ -400,7 +400,7 @@ runs:
           echo "Working with PR #$pr_number"
           is_pr_context="true"
           CI_VARS["is-pr"]="true"
-          CI_VARS["pr-number"]="pr_number"
+          CI_VARS["pr-number"]=$pr_number
 
           # Fetch PR data using GitHub CLI
           pr_path="repos/${target_repo_name_full}/pulls/${pr_number}"
