@@ -399,7 +399,7 @@ runs:
           # Fetch PR data using GitHub CLI
           pr_path="repos/${target_repo_name_full}/pulls/${pr_number}"
           echo "Fetching data for PR #${pr_number} using GitHub CLI ('$pr_path')..."
-          pr_data=$(gh api  2>/dev/null || echo "")
+          pr_data=$(gh api "$pr_path" 2>/dev/null || echo "")
           if [[ -z "$pr_data" ]]; then
             echo "⚠️ ERROR: Could not fetch PR data for PR #$pr_number"
             exit 1
