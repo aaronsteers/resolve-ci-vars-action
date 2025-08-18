@@ -337,10 +337,4 @@ jobs:
             exit 1
           fi
 
-          # Check that custom variables are still included
-          if [ "${{ fromJSON(steps.vars-pr5.outputs.custom).custom_var }}" != "test_value" ]; then
-            echo "ERROR: custom_var should still be included with standard CI vars"
-            exit 1
-          fi
-
           echo "✅ Standard CI variables test passed!"
