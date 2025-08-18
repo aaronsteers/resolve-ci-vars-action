@@ -165,10 +165,28 @@ runs:
       run: |
         if command -v gh >/dev/null 2>&1; then
           echo "✅ The `gh` CLI was found!"
+          echo "found='true'" >> "$GITHUB_OUTPUT"
         else
-          echo "Warning: GitHub CLI (gh) not available. PR resolution will be limited."
-          exit 1
+          echo "Warning: GitHub CLI (gh) not available. We will attempt to install it in the next step."
+          echo "found=false" >> "$GITHUB_OUTPUT"
         fi
+
+    - name: Setup GitHub CLI
+      if: ${{ steps.check-gh-cli.outputs.found == 'false' }}
+      shell: bash
+      # This is copied from: gh's official docs:
+      # - https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian
+      # TODO: Replace this with an action.
+      run: |
+        (type -p wget >/dev/null || (sudo apt update && sudo apt install wget -y)) \
+          && sudo mkdir -p -m 755 /etc/apt/keyrings \
+          && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+          && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+          && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+          && sudo mkdir -p -m 755 /etc/apt/sources.list.d \
+          && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+          && sudo apt update \
+          && sudo apt install gh -y
 
     - name: Resolve Target Repo
       id: resolve-target-repo
@@ -505,7 +523,8 @@ runs:
         echo "CI_VARS_JSON=$ci_vars_json_compact" >> "$GITHUB_ENV"
 
     # Process Jinja inputs using external action if jinja_inputs provided
-    - id: process-jinja
+    - name: Process Jinja Inputs
+      id: process-jinja
       if: ${{ inputs.jinja_inputs != '' }}
       shell: bash
       run: |
@@ -560,7 +579,8 @@ runs:
           echo "Using variables file: $TEMP_VARS_FILE"
         fi
 
-    - id: render-jinja
+    - name: Render Jinja Template
+      id: render-jinja
       if: ${{ inputs.jinja_inputs != '' }}
       uses: lexty/jinja2-renderer@v1
       with:
@@ -570,7 +590,8 @@ runs:
         environment_variables: 'false'
         strict: 'false'
 
-    - id: merge-results
+    - name: Merge Results
+      id: merge-results
       shell: bash
       run: |
         declare -A RESOLVED_VARS
