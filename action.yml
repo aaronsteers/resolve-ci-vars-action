@@ -259,6 +259,8 @@ runs:
     - name: Resolve Comment ID
       id: resolve-comment-id
       shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
         if [[ ! -z '${{ inputs.comment_id }}' ]]; then
           echo "ℹ️ Found comment ID from explicit input: ${{ inputs.comment_id }}"
@@ -291,6 +293,8 @@ runs:
     - name: Resolve PR Number
       id: resolve-pr-num
       shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
         # Method 1: Check for Explicit PR Input
         if [[ ! -z '${{ inputs.pr }}' ]]; then
@@ -357,6 +361,8 @@ runs:
     - name: Resolve Standard CI Variables
       id: resolve-standard-ci-vars
       shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
         declare -A CI_VARS
 
