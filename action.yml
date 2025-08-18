@@ -178,10 +178,6 @@ runs:
         # This will be used to locate comments and PRs if requested by number.
         # Comments and PRs are always resolved against the target repo, not the
         # source repo.
-        # NOTE: This will work for most cases, but will not work great
-        # in cases where we are doing cross-repo operations, such as reusing
-        # one repo's workflow from another, or when operating on a repo that
-        # is different from the one triggering the github workflow.
         target_repo_name_full=${{ inputs.repo || github.repository }}
         echo "target-repo-name-full=$target_repo_name_full" >> "$GITHUB_OUTPUT"
 
