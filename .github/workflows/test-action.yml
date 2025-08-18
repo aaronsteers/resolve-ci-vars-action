@@ -8,6 +8,11 @@ on:
         required: false
         default: ''
 
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
 jobs:
   test-resolve-vars:
     name: Test Resolve Vars Action

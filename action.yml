@@ -402,6 +402,8 @@ runs:
           pr_data=$(gh api "$pr_path" 2>/dev/null || echo "")
           if [[ -z "$pr_data" ]]; then
             echo "⚠️ ERROR: Could not fetch PR data for PR #$pr_number"
+            echo "Rerunning now to show the error message:"
+            gh api "$pr_path"
             exit 1
           fi
 
