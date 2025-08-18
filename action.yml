@@ -505,7 +505,8 @@ runs:
         echo "CI_VARS_JSON=$ci_vars_json_compact" >> "$GITHUB_ENV"
 
     # Process Jinja inputs using external action if jinja_inputs provided
-    - id: process-jinja
+    - name: Process Jinja Inputs
+      id: process-jinja
       if: ${{ inputs.jinja_inputs != '' }}
       shell: bash
       run: |
@@ -560,7 +561,8 @@ runs:
           echo "Using variables file: $TEMP_VARS_FILE"
         fi
 
-    - id: render-jinja
+    - name: Render Jinja Template
+      id: render-jinja
       if: ${{ inputs.jinja_inputs != '' }}
       uses: lexty/jinja2-renderer@v1
       with:
@@ -570,7 +572,8 @@ runs:
         environment_variables: 'false'
         strict: 'false'
 
-    - id: merge-results
+    - name: Merge Results
+      id: merge-results
       shell: bash
       run: |
         declare -A RESOLVED_VARS
