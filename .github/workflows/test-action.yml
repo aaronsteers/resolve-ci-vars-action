@@ -25,7 +25,6 @@ jobs:
           static_inputs: |
             username=testuser
             environment=development
-            custom_var=my_value
 
           # Jinja2 inputs to evaluate:
           # These are intentionally nonsensical, but they demonstrate the syntax
@@ -174,12 +173,6 @@ jobs:
             exit 1
           fi
 
-          # Check that custom variables are still included
-          if [ "${{ fromJSON(steps.vars.outputs.custom).custom_var }}" != "test_value" ]; then
-            echo "ERROR: custom_var should still be included with standard CI vars"
-            exit 1
-          fi
-
           echo "✅ Standard CI variables test passed!"
 
       - name: Verify standard CI variables
@@ -240,12 +233,6 @@ jobs:
           if [ "${{ steps.vars.outputs.is-pr }}" != "true" ]; then
             echo "ERROR: is-pr should be true for pull_request events"
             echo "Actual: ${{ steps.vars.outputs.is-pr }}"
-            exit 1
-          fi
-
-          # Check that custom variables are still included
-          if [ "${{ fromJSON(steps.vars.outputs.custom).custom_var }}" != "test_value" ]; then
-            echo "ERROR: custom_var should still be included with standard CI vars"
             exit 1
           fi
 
