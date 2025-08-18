@@ -277,19 +277,6 @@ runs:
         echo "comment-id=$comment_id" >> "$GITHUB_OUTPUT"
         target_repo_name_full="${{ steps.resolve-repo.outputs.target-repo-name-full }}"
 
-        # Check the API to see if there's an attached PR to this comment
-        if [[ -n "$comment_id" ]]; then
-          echo "ℹ️ Checking API for attached PR to comment ID: $comment_id"
-          # Simulate API call to check for PR
-          pr_number=$(gh api repos/${target_repo_name_full}/issues/comments/$comment_id --jq '.pull_request.number // empty')
-          if [[ -n "$pr_number" ]]; then
-            echo "ℹ️ Found attached PR: $pr_number"
-            echo "pr-number=$pr_number" >> "$GITHUB_OUTPUT"
-          else
-            echo "ℹ️ No attached PR found for comment ID: $comment_id"
-          fi
-        fi
-
     - name: Resolve PR Number
       id: resolve-pr-num
       shell: bash
@@ -302,6 +289,9 @@ runs:
           echo pr-number="${{ inputs.pr }}" >> "$GITHUB_OUTPUT"
           exit 0
         fi
+
+        # Initialize as empty string
+        pr_number=""
 
         # Method 2: Direct from GitHub event context
         if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "pull_request_target" ]]; then
@@ -344,6 +334,21 @@ runs:
             exit 0
           fi
         fi
+
+        # Method 4: Check for an attached PR to the comment
+        if [[ -z $pr_number && -n "$comment_id" ]]; then
+          target_repo_name_full="${{ steps.resolve-repo.outputs.target-repo-name-full }}"
+          comment_path="repos/${target_repo_name_full}/issues/comments/$comment_id"
+          echo "ℹ️ Checking API at '$comment_path' for attached PR to comment ID: $comment_id"
+          pr_number=$(gh api "$comment_path" --jq '.pull_request.number // empty' || echo "")
+          if [[ -n "$pr_number" ]]; then
+            echo "ℹ️ Found attached PR: $pr_number"
+            echo "pr-number=$pr_number" >> "$GITHUB_OUTPUT"
+          else
+            echo "ℹ️ No attached PR found for comment ID: $comment_id"
+          fi
+        fi
+
 
         # Output the resolved PR number if found
         if [[ -n "$pr_number" ]]; then
@@ -405,7 +410,7 @@ runs:
           # Fetch PR data using GitHub CLI
           pr_path="repos/${target_repo_name_full}/pulls/${pr_number}"
           echo "Fetching data for PR #${pr_number} using GitHub CLI ('$pr_path')..."
-          pr_data=$(gh api "$pr_path" 2>/dev/null || echo "")
+          pr_data=$(gh api "$pr_path" || echo "")
           if [[ -z "$pr_data" ]]; then
             echo "⚠️ ERROR: Could not fetch PR data for PR #$pr_number"
             echo "Rerunning now to show the error message:"
@@ -594,7 +599,7 @@ runs:
               # Also output as individual GitHub Action output
               echo "$key=$value" >> "$GITHUB_OUTPUT"
             fi
-          done < <(echo "$CI_VARS_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"' 2>/dev/null || echo "")
+          done < <(echo "$CI_VARS_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"' || echo "")
         fi
 
         # Process jinja results if they exist
