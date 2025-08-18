@@ -95,8 +95,6 @@ The action automatically resolves common CI variables from GitHub context, elimi
 | `resolved-repo-name` | Repository name (e.g. `my-repo`) | `airbyte` |
 | `resolved-repo-owner` | Repository owner (user or org) | `airbytehq` |
 | `resolved-repo-name-full` | Owner + name (e.g. `myorg/my-repo`) | `airbytehq/airbyte` |
-| `resolved-git-branch-url` | URL to the branch in GitHub | `https://github.com/airbytehq/airbyte/tree/feature/new-connector` |
-| `resolved-git-commit-url` | URL to the commit in GitHub | `https://github.com/airbytehq/airbyte/commit/abc123...` |
 | **PR Source Variables (for PR workflows)** |
 | `pr-source-git-ref` | Git ref of the source (PR head) | `refs/heads/feature/new-connector` |
 | `pr-source-git-branch` | Branch name of the source | `feature/new-connector` |
@@ -104,9 +102,7 @@ The action automatically resolves common CI variables from GitHub context, elimi
 | `pr-source-repo-name` | Source repo name | `airbyte` |
 | `pr-source-repo-owner` | Source repo owner | `contributor` |
 | `pr-source-repo-name-full` | Full source repo name (owner/name) | `contributor/airbyte` |
-| `pr-source-git-branch-url` | URL to the source branch | `https://github.com/contributor/airbyte/tree/feature/new-connector` |
-| `pr-source-git-commit-url` | URL to the source commit | `https://github.com/contributor/airbyte/commit/abc123...` |
-| `pr-source-is-fork` | Whether the source repo is a fork | `true` |
+| `pr-source-repo-is-fork` | Whether the source repo is a fork of the target repo | `true` |
 | **PR Target Variables (for PR workflows)** |
 | `pr-target-git-ref` | Git ref of the target (PR base) | `refs/heads/main` |
 | `pr-target-git-branch` | Branch name of the target | `main` |
@@ -115,8 +111,6 @@ The action automatically resolves common CI variables from GitHub context, elimi
 | `pr-target-repo-name` | Target repo name | `airbyte` |
 | `pr-target-repo-owner` | Target repo owner | `airbytehq` |
 | `pr-target-repo-name-full` | Full target repo name (owner/name) | `airbytehq/airbyte` |
-| `pr-target-git-branch-url` | URL to the target branch | `https://github.com/airbytehq/airbyte/tree/main` |
-| `pr-target-git-commit-url` | URL to the target commit | `https://github.com/airbytehq/airbyte/commit/def456...` |
 | **Additional Resolved Metadata** |
 | `pr-number` | Pull request number (if applicable) | `12345` |
 | `pr-url` | URL to the pull request | `https://github.com/airbytehq/airbyte/pull/12345` |
