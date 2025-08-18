@@ -25,6 +25,7 @@ jobs:
           static_inputs: |
             username=testuser
             environment=development
+            custom_var=my_value
 
           # Jinja2 inputs to evaluate:
           # These are intentionally nonsensical, but they demonstrate the syntax
