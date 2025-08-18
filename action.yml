@@ -179,7 +179,7 @@ runs:
         # Comments and PRs are always resolved against the target repo, not the
         # source repo.
         target_repo_name_full=${{ inputs.repo || github.repository }}
-        echo "target-repo-name-full=$target_repo_name_full" >> "$GITHUB_OUTPUT"
+        echo "target-repo-name-full=${target_repo_name_full}" >> "$GITHUB_OUTPUT"
 
     - name: Resolve Custom Variables
       id: resolve-custom-vars
@@ -273,13 +273,13 @@ runs:
           comment_id=$comment_id_input
         fi
         echo "comment-id=$comment_id" >> "$GITHUB_OUTPUT"
-        target_repo_name_full=${{ steps.resolve-repo.outputs.target-repo-name-full }}
+        target_repo_name_full="${{ steps.resolve-repo.outputs.target-repo-name-full }}"
 
         # Check the API to see if there's an attached PR to this comment
         if [[ -n "$comment_id" ]]; then
           echo "ℹ️ Checking API for attached PR to comment ID: $comment_id"
           # Simulate API call to check for PR
-          pr_number=$(gh api repos/$target_repo_name_full/issues/comments/$comment_id --jq '.pull_request.number // empty')
+          pr_number=$(gh api repos/${target_repo_name_full}/issues/comments/$comment_id --jq '.pull_request.number // empty')
           if [[ -n "$pr_number" ]]; then
             echo "ℹ️ Found attached PR: $pr_number"
             echo "pr-number=$pr_number" >> "$GITHUB_OUTPUT"
@@ -363,7 +363,7 @@ runs:
         # Easily Resolved Metadata
         target_repo_name_full="${{ steps.resolve-target-repo.outputs.target-repo-name-full }}"
         CI_VARS["run-id"]="${{ github.run_id }}"
-        CI_VARS["run-url"]="https://github.com/$target_repo_name_full/actions/runs/${{ github.run_id }}"
+        CI_VARS["run-url"]="https://github.com/${target_repo_name_full}/actions/runs/${{ github.run_id }}"
 
         pr_number="${{ steps.resolve-pr-num.outputs.pr-number }}"
         if [[ -z "$pr_number" ]]; then
@@ -374,11 +374,11 @@ runs:
           CI_VARS["resolved-git-ref"]="${{ github.ref }}"
           CI_VARS["resolved-git-branch"]="${{ github.ref_name }}"
           CI_VARS["resolved-git-sha"]="${{ github.sha }}"
-          CI_VARS["resolved-repo-name-full"]="$target_repo_name_full"
+          CI_VARS["resolved-repo-name-full"]="${target_repo_name_full}"
           CI_VARS["resolved-repo-owner"]="${{ github.repository_owner }}"
           repo_name="${{ github.event.repository.name }}"
           if [[ -z "$repo_name" ]]; then
-            repo_full="$target_repo_name_full"
+            repo_full="${target_repo_name_full}"
             repo_name="${repo_full##*/}"
           fi
           CI_VARS["resolved-repo-name"]="$repo_name"
@@ -397,8 +397,9 @@ runs:
           CI_VARS["pr-number"]="pr_number"
 
           # Fetch PR data using GitHub CLI
-          echo "Fetching PR data for PR #$pr_number using GitHub CLI..."
-          pr_data=$(gh api repos/$target_repo_name_full/pulls/"$pr_number" 2>/dev/null || echo "")
+          pr_path="repos/${target_repo_name_full}/pulls/${pr_number}"
+          echo "Fetching data for PR #${pr_number} using GitHub CLI ('$pr_path')..."
+          pr_data=$(gh api  2>/dev/null || echo "")
           if [[ -z "$pr_data" ]]; then
             echo "⚠️ ERROR: Could not fetch PR data for PR #$pr_number"
             exit 1
