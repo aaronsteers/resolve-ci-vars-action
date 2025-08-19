@@ -28,6 +28,8 @@ jobs:
     - name: Install ACT CLI
       run: |
         curl -s https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+        echo "$HOME/bin" >> $GITHUB_PATH
+        export PATH="$HOME/bin:$PATH"
         act --version
     
     - name: Set up Docker
